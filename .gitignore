@@ -38,6 +38,6 @@ Thumbs.db
 
 # pictures and stuff # 
 ######################
-.pdf
-.png
-.html
+*.pdf
+*.png
+*.html

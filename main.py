@@ -606,7 +606,32 @@ def halfer_root_0_picture():
 
     print([g.nodes[n] for n in g.nodes])
 
-if __name__ == '__main__':
 
-    g=square_graph.SquareWilson(30)
-    g.coupled_cont(2.4,2.2,store_each_step_to_pdf=True)
+def save_coupling():
+    g = square_graph.SquareWilson(5)
+    i=0
+    q = 3
+    g.stack_version_of_wilson(q, renumber_roots_after_finishing=False, start_from_scratch=True)
+    m = len(g.roots)
+    while q > 1:
+        i+=1
+
+        q = g._coupled_q_next(q)
+        g.create_pdf(f'graph_with_{i=}.pdf',node_size=280,arrowsize=14)
+
+        m = len(g.roots)
+        print(i, q)
+
+
+def print_stored_root_distribution_for_halfer():
+    plt.plot(range(11), [3310, 3285, 1719, 882, 458, 224, 127, 69, 51, 22, 29.],
+             label='Coupling process stopped for q<0.004')
+    plt.plot(range(11), [3332, 3457, 1639, 847, 403, 186, 137, 60, 48, 28, 25.],
+             label="Direct Application of Wilson's algorithm\n for the same q as above")
+    plt.legend()
+    plt.show()
+
+
+if __name__ == '__main__':
+    save_coupling()
+

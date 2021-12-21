@@ -185,7 +185,7 @@ class WilsonGraph(nx.DiGraph):
                          **kwargs,
                          )
         plt.axis('equal')
-
+        plt.box(False)
         plt.savefig(filename, bbox_inches='tight')
 
     def get_node_weight(self, node):
@@ -293,15 +293,11 @@ class WilsonGraph(nx.DiGraph):
         # print(f'{q_next =}')
         return q_next
 
-    def coupled_cont(self, qmax, q_stop, store_each_step_to_pdf=False):
+    def coupled_cont(self, qmax, q_stop):
         q = qmax
         self.stack_version_of_wilson(q, renumber_roots_after_finishing=False, start_from_scratch=True)
         while q > q_stop:
             q = self._coupled_q_next(q)
-            if store_each_step_to_pdf:
-                self.create_pdf(f'graph_with_q={q}.pdf')
-                print(q)
-
         self.number_the_nodes()
         return q
 
