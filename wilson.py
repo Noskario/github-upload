@@ -107,8 +107,6 @@ class WilsonGraph(nx.DiGraph):
 
     def show(self, graphname, color_roots=True, minimum=None, maximum=None):
         """
-
-
         :param graphname: has to have the format "name_of_graph.html"
         :return: does not return anything, but draws the graph creating an html-file
         """
@@ -139,7 +137,8 @@ class WilsonGraph(nx.DiGraph):
         h.show(graphname)
         time.sleep(.2)
 
-    def create_pdf(self, filename='graph.pdf', color_using_roots=True, print_values=False, show_immediately=False, **kwargs):
+    def create_pdf(self, filename='graph.pdf', color_using_roots=True, print_values=False, show_immediately=False,
+                   **kwargs):
         plt.clf()
         if print_values:
             kwargs['labels'] = {n: "%.2g" % self.nodes[n]['value'] for n in self.nodes}
@@ -188,6 +187,42 @@ class WilsonGraph(nx.DiGraph):
                          **kwargs,
                          )
         plt.axis('equal')
+        plt.box(False)
+        plt.savefig(filename, bbox_inches='tight')
+        if show_immediately:
+            plt.show()
+
+    def create_pdf_using_custom_color_scheme(self, filename='graph.pdf', show_immediately=False, title=None,
+                                             **kwargs):
+        plt.clf()
+
+        if 'norm' not in kwargs:  # vmin and vmax are not allowed if a color-norm is already given
+            if 'vmin' not in kwargs or 'vmax' not in kwargs:
+                vmin = self.get_miminum_value()
+                vmax = self.get_maximum_value()
+                vmin = min(vmin, -1)
+                vmax = max(vmax, 1)
+                vmin = min(vmin, -vmax)
+                vmax = max(vmax, -vmin)
+                kwargs['vmin'] = vmin
+                kwargs['vmax'] = vmax
+
+        if 'cmap' not in kwargs:
+            kwargs['cmap'] = plt.cm.coolwarm
+        if 's' not in kwargs:
+            kwargs['s']=3
+
+        plt.scatter(
+                         x=[self.nodes[n]['x'] for n in self.nodes],
+                         y=[-self.nodes[n]['y'] for n in self.nodes],
+                         c=[self.nodes[n]['value'] for n in self.nodes],
+                         **kwargs,
+                         )
+        plt.axis('equal')
+        if title is not None:
+            plt.title(title)
+        plt.colorbar()
+        plt.axis('off')
         plt.box(False)
         plt.savefig(filename, bbox_inches='tight')
         if show_immediately:
@@ -595,7 +630,6 @@ class WilsonGraph(nx.DiGraph):
     def stack_version_of_wilson(self, q, active_nodes: set = 'all', renumber_roots_after_finishing=False,
                                 start_from_scratch=False, roots=None):
         """
-
         :param q:
         :param active_nodes: Set of nodes that are still active. Also 'all' is accepted.
         :param renumber_roots_after_finishing:
