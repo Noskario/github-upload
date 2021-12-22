@@ -665,8 +665,10 @@ def visualize_analysis_operator():
     vmin_original = g_o.get_miminum_value()
     vmax_original = g_o.get_maximum_value()
     vmax_original = max(-vmin_original, vmax_original)
-    vmin_original = max(-vmax_original, vmin_original)
-    g_o.create_pdf(f'square_roots_for_ana_rec.pdf', edgelist=[], node_size=3)
+    vmin_original = min(-vmax_original, vmin_original)
+    print(f'{vmin_original=}')
+    print(f'{vmax_original=}')
+    g_o.create_pdf(f'square_graph_roots_for_ana_rec.pdf', edgelist=[], node_size=3)
     # g_o.create_pdf(f'square_roots_for_ana_rec.pdf', node_size=4, color_using_roots=True, edgelist=[])
     for q_prime in np.arange(10) + .5:
         g = copy.deepcopy(g_o)
@@ -682,6 +684,8 @@ def visualize_analysis_operator():
         h2.reconstruction_operator(q_prime)
         vmin = min(h.get_miminum_value(), h2.get_miminum_value(), vmin_original) - 1
         vmax = max(h.get_maximum_value(), h2.get_maximum_value(), vmax_original) + 1
+        vmin = min(vmin, -vmax)
+        vmax = max(vmax, -vmin)
 
         red = plt.get_cmap('coolwarm', 256)(256)
         blue = plt.get_cmap('coolwarm', 256)(0)
@@ -693,12 +697,13 @@ def visualize_analysis_operator():
             )
         )
         cmap = matplotlib.colors.ListedColormap(cmap)
-
+        ticks = [vmin, (vmin + vmin_original) / 2, vmin_original, vmin_original / 2, 0, vmax_original / 2,
+                 vmax_original, (vmax_original + vmax) / 2, vmax]
         norm = matplotlib.colors.FuncNorm((lambda x: foward(x, vmin, vmin_original, vmax_original, vmax),
                                            lambda x: inverse(x, vmin, vmin_original, vmax_original, vmax)),
                                           vmin=vmin,
                                           vmax=vmax)
-
+        print(f'{q_prime=}')
         print(f'{type(norm)=}')
         print(f'{norm=}')
         print(f'{norm(0)=}')
@@ -706,13 +711,18 @@ def visualize_analysis_operator():
         print(f'{vmax=}')
         print(f'{vmin_original=}')
         print(f'{vmax_original=}')
-        g.create_pdf_using_custom_color_scheme(f'square_graph_analyzed{q_prime=}.pdf', cmap=cmap, norm=norm)
-        g_o.create_pdf_using_custom_color_scheme(f'square_graph_original{q_prime=}.pdf', cmap=cmap, norm=norm)
-        h.create_pdf_using_custom_color_scheme(f'square_graph_rec_without_detail{q_prime=}.pdf', cmap=cmap, norm=norm)
-        h2.create_pdf_using_custom_color_scheme(f'square_graph_rec_only_detail{q_prime=}.pdf', cmap=cmap, norm=norm)
+        g.create_pdf_using_custom_color_scheme(f'square_graph_analyzed{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+                                               norm=norm)
+        g_o.create_pdf_using_custom_color_scheme(f'square_graph_original{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+                                                 norm=norm)
+        h.create_pdf_using_custom_color_scheme(f'square_graph_rec_without_detail{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+                                               norm=norm)
+        h2.create_pdf_using_custom_color_scheme(f'square_graph_rec_only_detail{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+                                                norm=norm)
         for n in h2.nodes:
             h2.nodes[n]['value'] += h.nodes[n]['value']
-        h2.create_pdf_using_custom_color_scheme(f'square_graph_rec_sum{q_prime=}.pdf', cmap=cmap, norm=norm)
+        h2.create_pdf_using_custom_color_scheme(f'square_graph_rec_sum{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+                                                norm=norm)
         for n in h2.nodes:
             h2.nodes[n]['value'] -= g_o.nodes[n]['value']
         h2.create_pdf_using_custom_color_scheme(f'square_graph_error{q_prime=}.pdf', cmap=plt.cm.BrBG,

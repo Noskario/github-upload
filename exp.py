@@ -15,52 +15,14 @@ cmap = np.vstack(
     )
 )
 cmap = matplotlib.colors.ListedColormap(cmap)
-
-
-# def _forward(x, a, b, c, d):
-#     print('_forward')
-#     print(x)
-#     if not a <= b <= c <= d:
-#         raise ValueError(f'The arguments a,b,c,d have to be a<=b<=c<=d. Got {a=}, {b=}, {c=}, {d=}')
-#     if a <= x <= b:
-#         return 1 / 3 * (x - a) / (b - a)
-#     if b <= x <= c:
-#         return 1 / 3 + 1 / 3 * (x - b) / (c - b)
-#     if c <= x <= d:
-#         return 2 / 3 + 1 / 3 * (x - c) / (d - c)
-#     if x < a:
-#         return 0
-#     if x > d:
-#         return 1
-#
-#
-# forward = np.vectorize(_forward)
-#
-#
-# def _inverse(x, a, b, c, d):
-#     print('_inverse')
-#     print(x)
-#     if not a <= b <= c <= d:
-#         raise ValueError(f'The arguments a,b,c,d have to be a<=b<=c<=d. Got {a=}, {b=}, {c=}, {d=}')
-#     if 0 <= x <= 1 / 3:
-#         return a + 3 * x * (b - a)
-#     if 1 / 3 <= x <= 2 / 3:
-#         return b + 3 * (x - 1 / 3) * (c - b)
-#     if 2 / 3 <= x <= 1:
-#         return c + 3 * (x - 2 / 3) * (d - c)
-#     if x < 0:
-#         return a
-#     if x > 1:
-#         return d
-#
-#
-# inverse = np.vectorize(_inverse)
-
-a = -16160.
-b = -3957
-c = 3957
-d = 3958
-x = np.arange(-40, 12., .1)
+vmin=-80951.85105559323
+vmax=80951.85105559323
+vmin_original=-19453.6
+vmax_original=19453.6
+a = vmin
+b = vmin_original
+c = vmax_original
+d = vmax
 
 
 def foward(x, a, b, c, d):
@@ -78,10 +40,14 @@ def inverse(x, a, b, c, d):
 # plt.plot(x, ff(x, a, b, c, d))
 # plt.show()
 
-norm = matplotlib.colors.FuncNorm((lambda x: foward(x, a, b, c, d), lambda x: inverse(x, a, b, c, d)), vmin=a, vmax=d)
+norm = matplotlib.colors.FuncNorm((lambda x: foward(x, a, b, c, d), lambda x: inverse(x, a, b, c, d)), vmin=min(a, -d),
+                                  vmax=max(d, -a))
 print(f'{norm(0)=}')
-plt.scatter(x, x**3, c=x**3, cmap=cmap, norm=norm)
-plt.colorbar()
+x = np.arange(-40, 12., .1)
+plt.scatter(x, x ** 3, c=x ** 3, cmap=cmap, norm=norm)
+ticks = np.linspace(a, d, 15, endpoint=True)
+ticks=[a,(a+b)/2,b,b/2,0,c/2,c,(c+d)/2,d]
+plt.colorbar(ticks=ticks)
 print(f'{red=}')
 print(f'{blue=}')
 plt.show()

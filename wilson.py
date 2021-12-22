@@ -192,7 +192,7 @@ class WilsonGraph(nx.DiGraph):
         if show_immediately:
             plt.show()
 
-    def create_pdf_using_custom_color_scheme(self, filename='graph.pdf', show_immediately=False, title=None,
+    def create_pdf_using_custom_color_scheme(self, filename='graph.pdf', show_immediately=False, title=None, ticks=None,
                                              **kwargs):
         plt.clf()
 
@@ -219,9 +219,8 @@ class WilsonGraph(nx.DiGraph):
                          **kwargs,
                          )
         plt.axis('equal')
-        if title is not None:
-            plt.title(title)
-        plt.colorbar()
+
+        plt.colorbar(ticks=ticks)
         plt.axis('off')
         plt.box(False)
         plt.savefig(filename, bbox_inches='tight')
