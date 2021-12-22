@@ -102,6 +102,8 @@ class WilsonGraph(nx.DiGraph):
     #     if renumber_roots_after_finishing:
     #         self.number_the_nodes()
     #     return edges_that_form_the_spanning_forest
+    def wilson(self, q: float, roots: set = None, ):
+        self.stack_version_of_wilson(q, renumber_roots_after_finishing=True, start_from_scratch=True, roots=roots)
 
     def show(self, graphname, color_roots=True, minimum=None, maximum=None):
         """
@@ -137,7 +139,7 @@ class WilsonGraph(nx.DiGraph):
         h.show(graphname)
         time.sleep(.2)
 
-    def create_pdf(self, filename='graph.pdf', color_using_roots=True, print_values=False, **kwargs):
+    def create_pdf(self, filename='graph.pdf', color_using_roots=True, print_values=False, show_immediately=False, **kwargs):
         plt.clf()
         if print_values:
             kwargs['labels'] = {n: "%.2g" % self.nodes[n]['value'] for n in self.nodes}
@@ -148,7 +150,8 @@ class WilsonGraph(nx.DiGraph):
             node_color = ['darkred' if n in self.roots else 'palevioletred' for n in self.nodes]
             edgelist = [e for e in self.edges if self.edges[e]['hidden'] == False]
             kwargs['node_color'] = node_color
-            kwargs['edgelist'] = edgelist
+            if 'edgelist' not in kwargs:
+                kwargs['edgelist'] = edgelist
 
         else:
 
@@ -187,6 +190,8 @@ class WilsonGraph(nx.DiGraph):
         plt.axis('equal')
         plt.box(False)
         plt.savefig(filename, bbox_inches='tight')
+        if show_immediately:
+            plt.show()
 
     def get_node_weight(self, node):
         nodeweight = 0

@@ -609,29 +609,121 @@ def halfer_root_0_picture():
 
 def save_coupling():
     g = square_graph.SquareWilson(5)
-    i=0
+    i = 0
     q = 3
     g.stack_version_of_wilson(q, renumber_roots_after_finishing=False, start_from_scratch=True)
     m = len(g.roots)
     while q > 1:
-        i+=1
+        i += 1
 
         q = g._coupled_q_next(q)
-        g.create_pdf(f'graph_with_{i=}.pdf',node_size=280,arrowsize=14)
+        g.create_pdf(f'graph_with_{i=}.pdf', node_size=280, arrowsize=14)
 
         m = len(g.roots)
         print(i, q)
 
 
 def print_stored_root_distribution_for_halfer():
-    plt.plot(range(11), [3310, 3285, 1719, 882, 458, 224, 127, 69, 51, 22, 29.],
-             label='Coupling process stopped for q<0.004')
-    plt.plot(range(11), [3332, 3457, 1639, 847, 403, 186, 137, 60, 48, 28, 25.],
-             label="Direct Application of Wilson's algorithm\n for the same q as above")
+    # These are the numbers from a calculation that I did some time ago that took about one hour
+    coupled_list = np.array([3310, 3285, 1719, 882, 458, 224, 127, 69, 51, 22, 29.])
+    direct_list = np.array([3332, 3457, 1639, 847, 403, 186, 137, 60, 48, 28, 25.])
+
+    samplesize = 10000
+    width = .3
+    plt.bar(np.arange(11) - width, coupled_list / samplesize, width=width,
+            label='Coupling process stopped for q<0.004\nSamplesize:10000')
+    plt.bar(np.arange(11), direct_list / samplesize, width=width,
+            label="Direct Application of Wilson's algorithm\n for the same q as above\nSamplesize:10000")
+    # Now we compute the expected proportions
+    exp_list = np.array([1.] + [.5 ** i for i in range(10)])
+    exp_list = exp_list / exp_list.sum()
+    plt.bar(np.arange(11) + width, exp_list, width=width,
+            label="Theoretical probability for q->0")
+    plt.xticks(np.arange(11), np.arange(11))
+    # plt.title('Probability for a vertex becoming a root: \nNumerical approximations and theoretical results')
     plt.legend()
+
     plt.show()
 
 
-if __name__ == '__main__':
-    save_coupling()
+def visualize_analysis_operator():
+    g_o = square_graph.SquareWilson(50, standardweights=False)
+    g_o.wilson(q=12.345)
+    vmin_original = g_o.get_miminum_value()
+    vmax_original = g_o.get_maximum_value()
+    vmax_original = max(-vmin_original,vmax_original)
+    vmin_original=max(-vmax_original,vmin_original)
+    # g_o.create_pdf(f'square_roots_for_ana_rec.pdf', node_size=4, color_using_roots=True, edgelist=[])
+    for q_prime in np.arange(1) + .5:
+        g = copy.deepcopy(g_o)
+        # g.create_pdf(f'square_orig{q_prime=}.pdf', color_using_roots=False, node_size=4)
+        g.analysis_operator(q_prime)
+        # g.create_pdf(f'square_analyzed{q_prime=}.pdf', color_using_roots=False, node_size=4)
+        h = copy.deepcopy(g)
+        h2 = copy.deepcopy(g)
 
+        # g.reconstruction_operator(q_prime)
+        # g.create_pdf(f'square_reconstr{q_prime=}.pdf', color_using_roots=False, node_size=4)
+        # g_copy = square_graph.SquareWilson(90, standardweights=False)
+        # for n in g.nodes:
+        #     g.nodes[n]['value'] -= g_copy.nodes[n]['value']
+        # g.create_pdf(f'square_error{q_prime=}.pdf', color_using_roots=False, node_size=4,
+        #              vmin=min(g.get_miminum_value(), -g.get_maximum_value()),
+        #              vmax=max(-g.get_miminum_value(), g.get_maximum_value()),
+        #              )
+        h.set_non_root_values_to_zero()
+        h.reconstruction_operator(q_prime)
+        for n in h2.nodes:
+            if n in h2.roots:
+                h2.nodes[n]['value'] = 0
+        h2.reconstruction_operator(q_prime)
+        vmin = min(h.get_miminum_value(), h2.get_miminum_value())
+        vmax = min(h.get_maximum_value(), h2.get_maximum_value())
+        red = plt.get_cmap('coolwarm', 256)(256)
+        blue = plt.get_cmap('coolwarm', 256)(0)
+        # size_below=vmin_original-vmin
+        # size_original=vmax_original-vmin_original
+        # size_above=vmax-vmax_original
+        # size_below=round(size_below)
+        # size_original=round(size_original)
+        # size_above=round(size_above)
+        cmap = np.vstack(
+            (
+                matplotlib.colors.LinearSegmentedColormap.from_list('a', ['green', blue], 256)(np.linspace(0, 1, 256)),
+                plt.get_cmap('coolwarm', 256)(np.linspace(0, 1, 256)),
+                matplotlib.colors.LinearSegmentedColormap.from_list('a', [red, 'violet'], 256)(np.linspace(0, 1, 256)),
+            )
+        )
+        cmap = matplotlib.colors.ListedColormap(cmap)
+
+        def foward(x, a, b, c, d):
+            return np.piecewise(x, [(a <= x) & (x < b), (b <= x) & (x < c), (c <= x) & (x <= d), x < a, x > d],
+                                [lambda x: 1 / 3 * (x - a) / (b - a), lambda x: 1 / 3 + 1 / 3 * (x - b) / (c - b),
+                                 lambda x: 2 / 3 + 1 / 3 * (x - c) / (d - c), 0, 1])
+
+        def inverse(x, a, b, c, d):
+            return np.piecewise(x, [(0 <= x) & (x < 1 / 3), (1 / 3 <= x) & (x < 2 / 3), (2 / 3 <= x) & (x <= 1), x < 0,
+                                    x > 1],
+                                [lambda x: a + 3 * x * (b - a), lambda x: b + 3 * (x - 1 / 3) * (c - b),
+                                 lambda x: c + 3 * (x - 2 / 3) * (d - c), a, d])
+
+        norm = matplotlib.colors.FuncNorm((lambda x: foward(x, vmin, vmin_original, vmax_original, vmax),
+                                           lambda x: inverse(x, vmin, vmin_original, vmax_original, vmax)), vmin=vmin,
+                                          vmax=vmax)
+        plt.scatter([h.nodes[n]['x'] for n in h.nodes],[-h.nodes[n]['y'] for n in h.nodes],c=[h.nodes[n]['value'] for n in h.nodes],cmap=cmap,norm=norm)
+        plt.colorbar()
+        plt.show()
+        plt.scatter([h2.nodes[n]['x'] for n in h2.nodes],[-h2.nodes[n]['y'] for n in h2.nodes],c=[h2.nodes[n]['value'] for n in h2.nodes],cmap=cmap,norm=norm)
+        plt.colorbar()
+        plt.show()
+        #h.create_pdf(f'square_rec_without_detail{q_prime=}.pdf', color_using_roots=False, node_size=4, cmap=cmap, norm=norm,
+        #             show_immediately=True)
+        #h2.create_pdf(f'square_rec_only_detail{q_prime=}.pdf', color_using_roots=False, node_size=4, cmap=cmap, norm=norm,
+        #              show_immediately=True)
+        for n in h2.nodes:
+            h2.nodes[n]['value'] += h.nodes[n]['value']
+        h2.create_pdf(f'square_rec_sum{q_prime=}.pdf', color_using_roots=False, node_size=4, )
+
+
+if __name__ == '__main__':
+    visualize_analysis_operator()
