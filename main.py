@@ -670,7 +670,9 @@ def visualize_analysis_operator():
     print(f'{vmax_original=}')
     g_o.create_pdf(f'square_graph_roots_for_ana_rec.pdf', edgelist=[], node_size=3)
     # g_o.create_pdf(f'square_roots_for_ana_rec.pdf', node_size=4, color_using_roots=True, edgelist=[])
-    for q_prime in np.arange(10) + .5:
+    for q_prime in [.01,.06,.2,.3,.5,1.5, 2.5, 4, 6.5, 9.5, 13, 18, 25,50,110,230,580,1400,6000,15000]:
+    #for q_prime in [20000,50000,100000,600000,2000000]:
+    #for q_prime in [1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1]:
         g = copy.deepcopy(g_o)
         g.analysis_operator(q_prime)
         h = copy.deepcopy(g)
@@ -711,21 +713,34 @@ def visualize_analysis_operator():
         print(f'{vmax=}')
         print(f'{vmin_original=}')
         print(f'{vmax_original=}')
-        g.create_pdf_using_custom_color_scheme(f'square_graph_analyzed{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+        g.create_pdf_using_custom_color_scheme(f'square_graph_analyzed_{q_prime=}.png', ticks=ticks, cmap=cmap,
+                                               colorbar=False,
                                                norm=norm)
-        g_o.create_pdf_using_custom_color_scheme(f'square_graph_original{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+        g_o.create_pdf_using_custom_color_scheme(f'square_graph_original_{q_prime=}.png', ticks=ticks, cmap=cmap,
+                                                 colorbar=False,
                                                  norm=norm)
-        h.create_pdf_using_custom_color_scheme(f'square_graph_rec_without_detail{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+        h.create_pdf_using_custom_color_scheme(f'square_graph_rec_without_detail_{q_prime=}.png', ticks=ticks,
+                                               cmap=cmap, colorbar=False,
                                                norm=norm)
-        h2.create_pdf_using_custom_color_scheme(f'square_graph_rec_only_detail{q_prime=}.pdf', ticks=ticks, cmap=cmap,
+        h2.create_pdf_using_custom_color_scheme(f'square_graph_rec_only_detail_{q_prime=}.png', ticks=ticks, cmap=cmap,
+                                                colorbar=False,
+                                                norm=norm)
+        g.create_pdf_using_custom_color_scheme(f'square_graph_colorbar_analyzed_{q_prime=}.png', ticks=ticks, cmap=cmap,
+                                               norm=norm)
+        g_o.create_pdf_using_custom_color_scheme(f'square_graph_colorbar_original_{q_prime=}.png', ticks=ticks,
+                                                 cmap=cmap,
+                                                 norm=norm)
+        h.create_pdf_using_custom_color_scheme(f'square_graph_colorbar_rec_without_detail_{q_prime=}.png', ticks=ticks,
+                                               cmap=cmap,
+                                               norm=norm)
+        h2.create_pdf_using_custom_color_scheme(f'square_graph_colorbar_rec_only_detail_{q_prime=}.png', ticks=ticks,
+                                                cmap=cmap,
                                                 norm=norm)
         for n in h2.nodes:
             h2.nodes[n]['value'] += h.nodes[n]['value']
-        h2.create_pdf_using_custom_color_scheme(f'square_graph_rec_sum{q_prime=}.pdf', ticks=ticks, cmap=cmap,
-                                                norm=norm)
         for n in h2.nodes:
             h2.nodes[n]['value'] -= g_o.nodes[n]['value']
-        h2.create_pdf_using_custom_color_scheme(f'square_graph_error{q_prime=}.pdf', cmap=plt.cm.BrBG,
+        h2.create_pdf_using_custom_color_scheme(f'square_graph_colorbar_error_{q_prime=}.png', cmap=plt.cm.BrBG,
                                                 norm=matplotlib.colors.CenteredNorm())
 
 
