@@ -8,6 +8,7 @@ import matplotlib
 import networkx as nx
 
 # import example_graphs
+import example_graphs
 import non_reversible_graphs
 import numpy as np
 import square_graph
@@ -119,148 +120,6 @@ def showhalfer_q():
     plt.show()
 
 
-def waermepockets():
-    g = square_graph.SquareWilsonConstantValues(40)
-    g.nodes['3,6']['value'] = 3000
-    g.wilson(.4)
-    g.analysis_operator(-1)
-    g.show('roots.html')
-    g.show('g_orig.html', color_roots=False)
-    g.wilson(2.3)
-    g.analysis_operator(1.8)
-    g.show('roots2.html')
-    g.show('g_ana.html', color_roots=False)
-    g.only_f_breve_reconstruction_operator(2.3)
-    g.show('only_breve.html', color_roots=False)
-
-
-# waermepockets()
-
-# g.set_non_root_values_to_zero()
-# g.show('g_without_detail.html', color_roots=False)
-# g.reconstruction_operator(1.8)
-# g.show('g_reconstr.html', color_roots=False)
-
-
-def boese_funktioniert_nicht():
-    g = square_graph.SquareWilsonConstantValues(40)
-    g.nodes['3,6']['value'] = 3000
-    g.wilson(.4)
-    s1 = g.roots
-    g.analysis_operator(-1)
-    # g.show('root_distr.html')
-    # g.show('exp.html', color_roots=False)
-    maximum = g.get_maximum_value()
-    minimum = g.get_miminum_value()
-    maximum = max(maximum, 1)
-    minimum = min(minimum, -1)
-    maximum = max(maximum, -minimum)
-    minimum = min(minimum, -maximum)
-    print('maximum unedited:', g.get_maximum_value())
-    print('minimum unedited:', g.get_miminum_value())
-    # g.show('g_orig.html', color_roots=False, maximum=maximum, minimum=minimum)
-    # g.show('roots.html')
-    g.wilson(5.9)
-    s2 = g.roots
-    print(s1 - s2)
-    print(s2 - s1)
-    print(len(s1), len(s2), len(s1 - s2), len(s2 - s1))
-    v = g.convert_values_to_np_array()
-    g.analysis_operator(10)
-    print('maximum edited:', g.get_maximum_value())
-    print('minimum edited:', g.get_miminum_value())
-    # g.show('g_ana.html', color_roots=False, maximum=maximum, minimum=minimum)
-    # g.set_non_root_values_to_zero()
-    # g.show('g_ana_to_zero.html', color_roots=False)
-    g.reconstruction_operator(10)
-    g.show('recr.html', color_roots=False, maximum=maximum, minimum=minimum)
-    for node in g.nodes:
-        g.nodes[node]['value'] -= v[g.nodes[node]['node_number']]
-    g.show('error.html', color_roots=False, maximum=maximum, minimum=minimum)
-    print('Maximaler Error:', g.get_maximum_value())
-    print('Minimaler Error:', g.get_miminum_value())
-    for node in g.nodes:
-        g.nodes[node]['value'] = v[g.nodes[node]['node_number']]
-    g.analysis_operator(10)
-    g.only_f_breve_reconstruction_operator(1.0)
-    g.show('only_X_breve.html', color_roots=False, maximum=maximum, minimum=minimum)
-    for node in g.nodes:
-        g.nodes[node]['value'] = v[g.nodes[node]['node_number']]
-    g.analysis_operator(10)
-    g.only_f_bar_reconstruction_operator(1.0)
-    g.show('only_X_bar.html', color_roots=False, maximum=maximum, minimum=minimum)
-
-
-def show_signal_processing():
-    g = square_graph.SquareWilson(70, standardweights=False)
-    g.nodes['3,6']['value'] = 3000
-    g.wilson(3.4)
-    g.show('g.html', color_roots=True)
-    v = g.convert_values_to_np_array()
-    maximum = g.get_maximum_value()
-    minimum = g.get_miminum_value()
-    maximum = max(maximum, 1)
-    minimum = min(minimum, -1)
-    maximum = max(maximum, -minimum)
-    minimum = min(minimum, -maximum)
-    print('maximum unedited:', g.get_maximum_value())
-    print('minimum unedited:', g.get_miminum_value())
-    g.show('g_orig.html', color_roots=False, maximum=maximum, minimum=minimum)
-    g.analysis_operator(10)
-    print('maximum edited:', g.get_maximum_value())
-    print('minimum edited:', g.get_miminum_value())
-    g.show('g_ana.html', color_roots=False, maximum=maximum, minimum=minimum)
-    # g.set_non_root_values_to_zero()
-    # g.show('g_ana_to_zero.html', color_roots=False)
-    g.reconstruction_operator(10)
-    g.show('recr.html', color_roots=False, maximum=maximum, minimum=minimum)
-    for node in g.nodes:
-        g.nodes[node]['value'] -= v[g.nodes[node]['node_number']]
-    g.show('error.html', color_roots=False, maximum=maximum, minimum=minimum)
-    print('Maximaler Error:', g.get_maximum_value())
-    print('Minimaler Error:', g.get_miminum_value())
-    for node in g.nodes:
-        g.nodes[node]['value'] = v[g.nodes[node]['node_number']]
-    g.analysis_operator(10)
-    g.only_f_breve_reconstruction_operator(1.0)
-    g.show('only_X_breve.html', color_roots=False, maximum=maximum, minimum=minimum)
-    for node in g.nodes:
-        g.nodes[node]['value'] = v[g.nodes[node]['node_number']]
-    g.analysis_operator(10)
-    g.only_f_bar_reconstruction_operator(1.0)
-    g.show('only_X_bar.html', color_roots=False, maximum=maximum, minimum=minimum)
-
-
-# show_signal_processing()
-
-
-def zeug():
-    g = square_graph.SquareWilson(50, standardweights=False)
-    g.wilson(2.7)
-    g.show('g.html')
-    g.number_the_nodes()
-    g.show('g.html', color_roots=False)
-    for _ in range(5):
-        g.analysis_operator(.3)
-        g.show('ana.html', color_roots=False)
-
-
-# print(g.nodes.data())
-# print(g.create_Laplacian('non-roots', 'roots').toarray())
-# print(g.convert_values_to_np_array().toarray())
-print('###############################')
-
-
-# g.analysis_operator(1)
-
-
-# g.analysis_operator(.4)
-# mat,tr_dict,_ = g.compute_Schur_complement()
-# print(mat.toarray())
-# g_down=wilson.create_graph_from_matrix(mat, tr_dict, g)
-# g_down.wilson(.4)
-# g_down.show('g_down.html')
-
 def laufzeitentest_ana_recr():
     nlist = []
     alist = []
@@ -312,15 +171,6 @@ def laufzeitentest():
 
 
 # laufzeitentest_ana_recr()
-
-# for item in temp:
-#     for ele in item:
-#         # print in a single line
-#         print(ele, end=" ")
-#     print()
-# print(temp.dot(mat.toarray()))
-
-# showhalfer_singletons()
 
 
 def recruntersuchung():
@@ -670,9 +520,9 @@ def visualize_analysis_operator():
     print(f'{vmax_original=}')
     g_o.create_pdf(f'square_graph_roots_for_ana_rec.pdf', edgelist=[], node_size=3)
     # g_o.create_pdf(f'square_roots_for_ana_rec.pdf', node_size=4, color_using_roots=True, edgelist=[])
-    for q_prime in [.01,.06,.2,.3,.5,1.5, 2.5, 4, 6.5, 9.5, 13, 18, 25,50,110,230,580,1400,6000,15000]:
-    #for q_prime in [20000,50000,100000,600000,2000000]:
-    #for q_prime in [1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1]:
+    for q_prime in [.01, .06, .2, .3, .5, 1.5, 2.5, 4, 6.5, 9.5, 13, 18, 25, 50, 110, 230, 580, 1400, 6000, 15000]:
+        # for q_prime in [20000,50000,100000,600000,2000000]:
+        # for q_prime in [1e-8,1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1]:
         g = copy.deepcopy(g_o)
         g.analysis_operator(q_prime)
         h = copy.deepcopy(g)

@@ -525,44 +525,6 @@ class WilsonGraph(nx.DiGraph):
         for node in self.nodes:
             self.nodes[node]['value'] = f[self.nodes[node]['node_number']]
 
-    def only_f_breve_reconstruction_operator(self, q, L_Schur=None):
-        f_ana = self.convert_values_to_np_array()
-        m = len(self.roots)
-        n = len(self.nodes)
-        f_bar = f_ana[:m]
-        f_breve = f_ana[m:]
-        L_breve_breve = self.create_Laplacian(selected_rows='non-roots', selected_cols='non-roots')
-        L_bar_breve = self.create_Laplacian(selected_rows='roots', selected_cols='non-roots')
-        # L_breve_bar = self.create_Laplacian(selected_rows='non-roots', selected_cols='roots')
-        if L_Schur is None:
-            L_Schur = self.compute_Schur_complement()
-        f = np.zeros(n)
-        # f[:m] += f_bar - 1 / q * L_Schur.dot(f_bar)
-        f[:m] += L_bar_breve.dot(scipy.sparse.linalg.spsolve(-L_breve_breve, f_breve))
-        # f[m:] += scipy.sparse.linalg.spsolve(-L_breve_breve, L_breve_bar.dot(f_bar))
-        f[m:] += q * scipy.sparse.linalg.spsolve(L_breve_breve, f_breve) - f_breve
-        for node in self.nodes:
-            self.nodes[node]['value'] = f[self.nodes[node]['node_number']]
-
-    def only_f_bar_reconstruction_operator(self, q, L_Schur=None):
-        f_ana = self.convert_values_to_np_array()
-        m = len(self.roots)
-        n = len(self.nodes)
-        f_bar = f_ana[:m]
-        f_breve = f_ana[m:]
-        L_breve_breve = self.create_Laplacian(selected_rows='non-roots', selected_cols='non-roots')
-        # L_bar_breve = self.create_Laplacian(selected_rows='roots', selected_cols='non-roots')
-        L_breve_bar = self.create_Laplacian(selected_rows='non-roots', selected_cols='roots')
-        if L_Schur is None:
-            L_Schur = self.compute_Schur_complement()
-        f = np.zeros(n)
-        f[:m] += f_bar - 1 / q * L_Schur.dot(f_bar)
-        # f[:m] += L_bar_breve.dot(scipy.sparse.linalg.spsolve(-L_breve_breve, f_breve))
-        f[m:] += scipy.sparse.linalg.spsolve(-L_breve_breve, L_breve_bar.dot(f_bar))
-        # f[m:] += q * scipy.sparse.linalg.spsolve(L_breve_breve, f_breve) - f_breve
-        for node in self.nodes:
-            self.nodes[node]['value'] = f[self.nodes[node]['node_number']]
-
     def set_non_root_values_to_zero(self):
         for node in set(self.nodes) - self.roots:
             self.nodes[node]['value'] = 0
