@@ -138,7 +138,7 @@ class WilsonGraph(nx.DiGraph):
         time.sleep(.2)
 
     def create_pdf(self, filename='graph.pdf', color_using_roots=True, print_values=False, show_immediately=False,
-                   **kwargs):
+                   colorbar=True, colorbar_for_edges=False, **kwargs):
         plt.clf()
         if print_values:
             kwargs['labels'] = {n: "%.2g" % self.nodes[n]['value'] for n in self.nodes}
@@ -147,15 +147,15 @@ class WilsonGraph(nx.DiGraph):
                 kwargs['font_size'] = 5
         if color_using_roots:
             node_color = ['darkred' if n in self.roots else 'palevioletred' for n in self.nodes]
-            edgelist = [e for e in self.edges if self.edges[e]['hidden'] == False]
             kwargs['node_color'] = node_color
+            edgelist = [e for e in self.edges if self.edges[e]['hidden'] == False]
             if 'edgelist' not in kwargs:
                 kwargs['edgelist'] = edgelist
 
         else:
 
             if 'vmin' not in kwargs or 'vmax' not in kwargs:
-                vmin = self.get_miminum_value()
+                vmin = self.get_minimum_value()
                 vmax = self.get_maximum_value()
                 vmin = min(vmin, -1)
                 vmax = max(vmax, 1)
@@ -171,9 +171,23 @@ class WilsonGraph(nx.DiGraph):
             cmap = kwargs['cmap']
             vmin = kwargs['vmin']
             vmax = kwargs['vmax']
-            sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin, vmax))
-            plt.colorbar(sm)
-            kwargs['edgelist'] = []
+            if colorbar:
+                sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin, vmax))
+                plt.colorbar(sm)
+            if colorbar_for_edges:
+                if 'edge_cmap' not in kwargs:
+                    kwargs['edge_cmap'] = plt.cm.viridis_r
+                edge_cmap = kwargs['edge_cmap']
+                if 'edge_color' not in kwargs:
+                    kwargs['edge_color'] = [self.edges[e]['weight'] for e in self.edges]
+                edge_color = kwargs['edge_color']
+                edge_vmin = min(edge_color)
+                edge_vmax = max(edge_color)
+                sm = plt.cm.ScalarMappable(cmap=edge_cmap, norm=plt.Normalize(edge_vmin, edge_vmax))
+                plt.colorbar(sm)
+
+            if 'edgelist' not in kwargs:
+                kwargs['edgelist'] = []
         if 'node_size' not in kwargs:
             kwargs['node_size'] = 20
         if 'arrowsize' not in kwargs:
@@ -192,13 +206,14 @@ class WilsonGraph(nx.DiGraph):
         if show_immediately:
             plt.show()
 
-    def create_pdf_using_custom_color_scheme(self, filename='graph.pdf', show_immediately=False, title=None, ticks=None, colorbar=True,
+    def create_pdf_using_custom_color_scheme(self, filename='graph.pdf', show_immediately=False, title=None, ticks=None,
+                                             colorbar=True,
                                              **kwargs):
         plt.clf()
 
         if 'norm' not in kwargs:  # vmin and vmax are not allowed if a color-norm is already given
             if 'vmin' not in kwargs or 'vmax' not in kwargs:
-                vmin = self.get_miminum_value()
+                vmin = self.get_minimum_value()
                 vmax = self.get_maximum_value()
                 vmin = min(vmin, -1)
                 vmax = max(vmax, 1)
@@ -210,14 +225,14 @@ class WilsonGraph(nx.DiGraph):
         if 'cmap' not in kwargs:
             kwargs['cmap'] = plt.cm.coolwarm
         if 's' not in kwargs:
-            kwargs['s']=3
+            kwargs['s'] = 3
 
         plt.scatter(
-                         x=[self.nodes[n]['x'] for n in self.nodes],
-                         y=[-self.nodes[n]['y'] for n in self.nodes],
-                         c=[self.nodes[n]['value'] for n in self.nodes],
-                         **kwargs,
-                         )
+            x=[self.nodes[n]['x'] for n in self.nodes],
+            y=[-self.nodes[n]['y'] for n in self.nodes],
+            c=[self.nodes[n]['value'] for n in self.nodes],
+            **kwargs,
+        )
         plt.axis('equal')
         if colorbar:
             plt.colorbar(ticks=ticks)
@@ -257,7 +272,7 @@ class WilsonGraph(nx.DiGraph):
             l.append(self.nodes[v]['value'])
         return max(l)
 
-    def get_miminum_value(self):
+    def get_minimum_value(self):
         l = []
         for v in self.nodes:
             l.append(self.nodes[v]['value'])
@@ -267,7 +282,7 @@ class WilsonGraph(nx.DiGraph):
         if maximum is None:
             maximum = self.get_maximum_value()
         if minimum is None:
-            minimum = self.get_miminum_value()
+            minimum = self.get_minimum_value()
         # begin: Damit null weiß wird
         minimum = min(minimum, -1)
         maximum = max(maximum, 1)
@@ -419,7 +434,7 @@ class WilsonGraph(nx.DiGraph):
                     self.nodes[n]['weight']
         return mat.tocsc()
 
-    def create_Laplacian(self, selected_rows='all', selected_cols='all'):
+    def create_Laplacian(self, selected_rows='all', selected_cols='all') -> scipy.sparse.csc_matrix:
         if selected_cols not in ['all', 'roots', 'non-roots']:
             raise ValueError("Only 'all', 'roots', 'non-roots' are accepted as arguments")
         if selected_rows not in ['all', 'roots', 'non-roots']:
@@ -459,7 +474,8 @@ class WilsonGraph(nx.DiGraph):
         row_list = np.array(row_list)
         col_list = np.array(col_list)
         weight_list = np.array(weight_list)
-        mat = scipy.sparse.csc_matrix((weight_list, (row_list, col_list)), shape=(len(chosen_rows), len(chosen_cols)))
+        mat = scipy.sparse.csc_matrix((weight_list, (row_list, col_list)), shape=(len(chosen_rows), len(chosen_cols)),
+                                      dtype=float)
         return mat
 
     def convert_to_numpy_matrix(self, selected_rows='all', selected_cols='all'):
@@ -472,19 +488,12 @@ class WilsonGraph(nx.DiGraph):
         mat_qu = self.create_Laplacian(selected_rows='roots', selected_cols='non-roots')
         mat_uq = self.create_Laplacian(selected_rows='non-roots', selected_cols='roots')
         mat_uu = self.create_Laplacian(selected_rows='non-roots', selected_cols='non-roots')
-        # print(f'{mat_qq = }')
-        # print(mat_qq)
-        # print(f'{mat_qu.dot(scipy.sparse.linalg.inv(mat_uu)).dot(mat_uq) = }')
-        # print(mat_qu.dot(scipy.sparse.linalg.inv(mat_uu)).dot(mat_uq))
-        # print(mat_qu.dot(scipy.sparse.linalg.inv(mat_uu)))
-        # print(mat_uq.todense())
-        # print(mat_uq.toarray())
-        # print(mat_qu.todense())
-        # print(f'{mat_uu.todense() = }')
-        # print(f'{mat_uu = }')
-        # print(f'{scipy.sparse.linalg.inv(mat_uu) = }')
-        # print(f'{(scipy.sparse.linalg.inv(mat_uu)).dot(mat_uq) = }')
-        return mat_qq - mat_qu.dot(scipy.sparse.linalg.inv(mat_uu)).dot(mat_uq)
+
+        mat_uu_inv = scipy.sparse.linalg.inv(mat_uu)
+        if mat_uu_inv.shape == (1,):
+            mat_uu_inv = mat_uu_inv.reshape((1, 1))
+
+        return mat_qq - mat_qu @ mat_uu_inv @ mat_uq
 
     def convert_values_to_np_array(self):
         n = len(self.nodes)
@@ -518,6 +527,10 @@ class WilsonGraph(nx.DiGraph):
         if L_Schur is None:
             L_Schur = self.compute_Schur_complement()
         f = np.zeros(n)
+        print(f'{L_Schur.shape=}')
+        print(f'{f[:m].shape=}')
+        print(f'{f_bar.shape=}')
+        print(f'{(1 / q * L_Schur.dot(f_bar)).shape=}')
         f[:m] += f_bar - 1 / q * L_Schur.dot(f_bar)
         f[:m] += L_bar_breve.dot(scipy.sparse.linalg.spsolve(-L_breve_breve, f_breve))
         f[m:] += scipy.sparse.linalg.spsolve(-L_breve_breve, L_breve_bar.dot(f_bar))
@@ -575,7 +588,7 @@ class WilsonGraph(nx.DiGraph):
                 pass
 
     def one_step_in_multiresolution_scheme(self, theta1=.2, theta2=1, name_of_graph='downsampled',
-                                           show_created_graph=True):
+                                           show_created_graph=False):
         if not self.weights_are_set:
             self.set_weights()
         q, _ = self._find_q(theta1, theta2)
@@ -664,7 +677,13 @@ class WilsonGraph(nx.DiGraph):
         return nbr
 
 
-def multiresolution(g: WilsonGraph, steps=5):
+def multiresolution(g: WilsonGraph, steps=5) -> (List[float], List[float], List[WilsonGraph]):
+    """
+
+    :param g: Graph that gets analyzed
+    :param steps: number of steps
+    :return: list of all downsampled graphs, list of all q_prime's, list of all q's
+    """
     downsampled_graph = copy.deepcopy(g)
     q_list = []
     q_prime_list = []
@@ -675,36 +694,20 @@ def multiresolution(g: WilsonGraph, steps=5):
             name_of_graph=f'downsampling_step_{i + 1}')
         q_list.append(q)
         q_prime_list.append(q_prime)
-        graph_list.append(copy.copy(g))
+        graph_list.append(copy.deepcopy(g))
     return q_list, q_prime_list, graph_list
 
 
-def multi_reconstr(g: WilsonGraph, q_list, q_prime_list, graph_list: List[WilsonGraph]):
-    for i in reversed(range(1, len(graph_list))):
-        print(f'You are in step {i}')
-        graph_list[i - 1].show(f'g{i}_before.html', color_roots=False)
-        graph_list[i - 1].set_all_values_to_zero()
-        graph_list[i - 1].copy_values_from_other_graph_wherever_they_exist(graph_list[i])
-        graph_list[i - 1].roots = copy.copy(set(graph_list[i].nodes))
-        graph_list[i - 1].show(f'g{i}_zeroed.html', color_roots=False)
-        # print(f'{q_list[i]=}')
-        graph_list[i - 1].reconstruction_operator(q_prime_list[i])
-        graph_list[i - 1].show(f'g{i}_reconstructed.html', color_roots=False)
-        # graph_list[i - 1].show(f'g_roots{i}.html', color_roots=True)
-    g.show('g_before.html', color_roots=False)
-    g.set_all_values_to_zero()
-    g.copy_values_from_other_graph_wherever_they_exist(graph_list[0])
-    g.show('g_zeroed.html', color_roots=False)
-    g.roots = set(graph_list[0].nodes)
-    g.number_the_nodes()
-    print(g.roots)
-    print(f'{len(g.roots)=}')
-    print(f'{len(graph_list[0].nodes)=}')
-    g.reconstruction_operator(q_prime_list[0])
-    g.show('g_after.html', color_roots=False)
-    # for i in range(len(graph_list)):
-    #    graph_list[i].show('g' + str(i + 1) + '.html', color_roots=False)
-    return q_list, q_prime_list, graph_list
+def multi_reconstr(graph_list: List[WilsonGraph], q_prime_list: List[float], modify_list=False):
+    if not modify_list:
+        graph_list = copy.deepcopy(graph_list)
+    graph_list[-1].set_non_root_values_to_zero()
+    graph_list[-1].reconstruction_operator(q_prime_list[-1])
+    for i in reversed(range(len(graph_list) - 1)):
+        graph_list[i].set_all_values_to_zero()
+        graph_list[i].copy_values_from_other_graph_wherever_they_exist(graph_list[i + 1])
+        graph_list[i].reconstruction_operator(q_prime_list[i])
+    return graph_list
 
 
 def multi_resolution_and_reconstr(g: WilsonGraph, steps=5):
@@ -712,7 +715,7 @@ def multi_resolution_and_reconstr(g: WilsonGraph, steps=5):
     q_list, q_prime_list, graph_list = multiresolution(g, steps)
     # print(f'{q_list=}')
     # print(f'{q_prime_list=}')
-    multi_reconstr(g, q_list, q_prime_list, graph_list)
+    multi_reconstr(graph_list, q_prime_list)
 
 
 def create_graph_from_matrix(mat, original_graph=None):

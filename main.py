@@ -7,7 +7,6 @@ import time
 import matplotlib
 import networkx as nx
 
-# import example_graphs
 import example_graphs
 import non_reversible_graphs
 import numpy as np
@@ -153,26 +152,6 @@ def laufzeitentest_ana_recr():
     plt.show()
 
 
-def laufzeitentest():
-    nlist = []
-    tlist = []
-    for i in range(10):
-        n = 5 * i + 30
-        g = square_graph.SquareWilson(n)
-        g.wilson(.1)
-        temp = time.time()
-        g.compute_Schur_complement()
-        tlist.append(time.time() - temp)
-        nlist.append(n)
-    tlist = np.array(tlist)
-    tlist = tlist ** .25
-    plt.plot(nlist, tlist)
-    plt.show()
-
-
-# laufzeitentest_ana_recr()
-
-
 def recruntersuchung():
     a = .3
     g = non_reversible_graphs.Triangle(a)
@@ -180,7 +159,8 @@ def recruntersuchung():
     while g.roots != {2, 3}:
         g.wilson(.01)
     print(g.roots)
-    g.reconstruction_operator(.2)
+    L_Schur=g.compute_Schur_complement()
+    g.reconstruction_operator(.2,L_Schur=L_Schur)
     g.show('recr_tri.html', color_roots=False)
 
 
@@ -255,7 +235,7 @@ def read_multi_and_do_stuff(steps=5, g=None, name_of_graph='graph'):
 
         q_list, q_prime_list, graph_list = pickle.load(file)
         print(q_list, q_prime_list, graph_list)
-        wilson.multi_reconstr(g, q_list[:], q_prime_list[:], graph_list[:])
+        wilson.multi_reconstr(graph_list[:], q_prime_list[:], )
 
 
 def test_R():
@@ -512,7 +492,7 @@ def inverse(x, a, b, c, d):
 def visualize_analysis_operator():
     g_o = square_graph.SquareWilson(90, standardweights=False)
     g_o.wilson(q=12.345)
-    vmin_original = g_o.get_miminum_value()
+    vmin_original = g_o.get_minimum_value()
     vmax_original = g_o.get_maximum_value()
     vmax_original = max(-vmin_original, vmax_original)
     vmin_original = min(-vmax_original, vmin_original)
@@ -534,7 +514,7 @@ def visualize_analysis_operator():
             if n in h2.roots:
                 h2.nodes[n]['value'] = 0
         h2.reconstruction_operator(q_prime)
-        vmin = min(h.get_miminum_value(), h2.get_miminum_value(), vmin_original) - 1
+        vmin = min(h.get_minimum_value(), h2.get_minimum_value(), vmin_original) - 1
         vmax = max(h.get_maximum_value(), h2.get_maximum_value(), vmax_original) + 1
         vmin = min(vmin, -vmax)
         vmax = max(vmax, -vmin)
@@ -594,5 +574,39 @@ def visualize_analysis_operator():
                                                 norm=matplotlib.colors.CenteredNorm())
 
 
+def visualize_downsampled_graph():
+    g = square_graph.SquareWilson(10)
+    g.wilson(9.34)
+    L = g.compute_Schur_complement()
+    g_downsampled = wilson.create_graph_from_matrix(L, g)
+    for e in g_downsampled.edges:
+        g_downsampled.edges[e]['hidden'] = False
+    # g_downsampled.create_pdf('downsampled_graph.pdf', color_using_roots=False, colorbar=False, node_color='gray',
+    #                         edgelist=g_downsampled.edges,
+    #                         colorbar_for_edges=True)
+    g_downsampled.set_weights()
+    print(g_downsampled.graph['alpha'])
+    for n in g_downsampled.nodes:
+        print(g_downsampled.nodes[n]['weight'])
+
+
+def visualize_multiresolution():
+    graph = square_graph.SquareWilson(10, standardweights=False)
+    q_list, q_prime_list, graph_list = wilson.multiresolution(graph, steps=6)
+    vmax = graph.get_maximum_value()
+    vmin = graph.get_minimum_value()
+    vmax = max(vmax, -vmin)
+    vmin = min(vmin, -vmax)
+
+    for i, g in enumerate(graph_list):
+        g.create_pdf(f'analyzed_graph{i + 1}.png', color_using_roots=False, vmax=vmax, vmin=vmin, colorbar=False,
+                     node_size=3)
+    reconstr_graph_list = wilson.multi_reconstr(graph_list, q_prime_list)
+    for i, g in enumerate(reconstr_graph_list):
+        g.create_pdf(f'reconstr_graph{i + 1}.png', color_using_roots=False, vmax=vmax, vmin=vmin, colorbar=False,
+                     node_size=3)
+
+
 if __name__ == '__main__':
-    visualize_analysis_operator()
+    visualize_multiresolution()
+    recruntersuchung()
