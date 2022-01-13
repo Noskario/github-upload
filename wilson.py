@@ -491,7 +491,7 @@ class WilsonGraph(nx.DiGraph):
 
         mat_uu_inv = scipy.sparse.linalg.inv(mat_uu)
         if mat_uu_inv.shape == (1,):
-            mat_uu_inv = mat_uu_inv.reshape((1, 1))
+            mat_uu_inv = scipy.sparse.csc_matrix(mat_uu_inv.reshape((1, 1)))
 
         return mat_qq - mat_qu @ mat_uu_inv @ mat_uq
 
@@ -528,6 +528,8 @@ class WilsonGraph(nx.DiGraph):
             L_Schur = self.compute_Schur_complement()
         f = np.zeros(n)
         print(f'{L_Schur.shape=}')
+        print(f'{type(L_Schur)=}')
+        print(f'{L_Schur.data=}')
         print(f'{f[:m].shape=}')
         print(f'{f_bar.shape=}')
         print(f'{(1 / q * L_Schur.dot(f_bar)).shape=}')
