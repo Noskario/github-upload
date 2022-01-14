@@ -159,8 +159,8 @@ def recruntersuchung():
     while g.roots != {2, 3}:
         g.wilson(.01)
     print(g.roots)
-    L_Schur=g.compute_Schur_complement()
-    g.reconstruction_operator(.2,L_Schur=L_Schur)
+    L_Schur = g.compute_Schur_complement()
+    g.reconstruction_operator(.2, L_Schur=L_Schur)
     g.show('recr_tri.html', color_roots=False)
 
 
@@ -490,7 +490,7 @@ def inverse(x, a, b, c, d):
 
 
 def visualize_analysis_operator():
-    g_o = square_graph.SquareWilson(90, standardweights=False)
+    g_o = square_graph.SquareWilson(40, standardweights=False)
     g_o.wilson(q=12.345)
     vmin_original = g_o.get_minimum_value()
     vmax_original = g_o.get_maximum_value()
@@ -575,7 +575,7 @@ def visualize_analysis_operator():
 
 
 def visualize_downsampled_graph():
-    g = square_graph.SquareWilson(10)
+    g = square_graph.SquareWilson(90)
     g.wilson(9.34)
     L = g.compute_Schur_complement()
     g_downsampled = wilson.create_graph_from_matrix(L, g)
@@ -591,7 +591,7 @@ def visualize_downsampled_graph():
 
 
 def visualize_multiresolution():
-    graph = square_graph.SquareWilson(10, standardweights=False)
+    graph = square_graph.SquareWilson(90, standardweights=False)
     q_list, q_prime_list, graph_list = wilson.multiresolution(graph, steps=6)
     vmax = graph.get_maximum_value()
     vmin = graph.get_minimum_value()
@@ -607,6 +607,27 @@ def visualize_multiresolution():
                      node_size=3)
 
 
+def runtime_test_Schur_complement():
+    nlist = [30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+    tlist = []
+    for n in nlist:
+        g = square_graph.SquareWilson(n, standardweights=False)
+        g.wilson(1.23456)
+        q, _ = g._find_q(theta_1=.2, theta_2=1.)
+        g.wilson(q)
+        temp = time.perf_counter()
+        g.compute_Schur_complement()
+        tlist.append(time.perf_counter() - temp)
+    nlist = np.array(nlist)
+    tlist = np.array(tlist)
+    plt.loglog(nlist, tlist / tlist[0], label='time')
+    plt.loglog(nlist, (nlist / nlist[0]) ** 2, label='order 2')
+    plt.loglog(nlist, (nlist / nlist[0]) ** 3, label='order 3')
+    plt.loglog(nlist, (nlist / nlist[0]) ** 4, label='order 4')
+    plt.legend()
+    plt.show()
+    return nlist, tlist
+
+
 if __name__ == '__main__':
     visualize_multiresolution()
-    recruntersuchung()

@@ -527,16 +527,29 @@ class WilsonGraph(nx.DiGraph):
         if L_Schur is None:
             L_Schur = self.compute_Schur_complement()
         f = np.zeros(n)
-        print(f'{L_Schur.shape=}')
-        print(f'{type(L_Schur)=}')
-        print(f'{L_Schur.data=}')
-        print(f'{f[:m].shape=}')
-        print(f'{f_bar.shape=}')
-        print(f'{(1 / q * L_Schur.dot(f_bar)).shape=}')
         f[:m] += f_bar - 1 / q * L_Schur.dot(f_bar)
         f[:m] += L_bar_breve.dot(scipy.sparse.linalg.spsolve(-L_breve_breve, f_breve))
         f[m:] += scipy.sparse.linalg.spsolve(-L_breve_breve, L_breve_bar.dot(f_bar))
         f[m:] += q * scipy.sparse.linalg.spsolve(L_breve_breve, f_breve) - f_breve
+        for node in self.nodes:
+            self.nodes[node]['value'] = f[self.nodes[node]['node_number']]
+
+    def reconstruction_operator_without_detail_nodes(self, q, L_Schur=None):
+        f_ana = self.convert_values_to_np_array()
+        m = len(self.roots)
+        n = len(self.nodes)
+        f_bar = f_ana[:m]
+        # f_breve = f_ana[m:]
+        L_breve_breve = self.create_Laplacian(selected_rows='non-roots', selected_cols='non-roots')
+        L_bar_breve = self.create_Laplacian(selected_rows='roots', selected_cols='non-roots')
+        L_breve_bar = self.create_Laplacian(selected_rows='non-roots', selected_cols='roots')
+        if L_Schur is None:
+            L_Schur = self.compute_Schur_complement()
+        f = np.zeros(n)
+        f[:m] += f_bar - 1 / q * L_Schur.dot(f_bar)
+        # f[:m] += L_bar_breve.dot(scipy.sparse.linalg.spsolve(-L_breve_breve, f_breve))
+        f[m:] += scipy.sparse.linalg.spsolve(-L_breve_breve, L_breve_bar.dot(f_bar))
+        # f[m:] += q * scipy.sparse.linalg.spsolve(L_breve_breve, f_breve) - f_breve
         for node in self.nodes:
             self.nodes[node]['value'] = f[self.nodes[node]['node_number']]
 
@@ -703,12 +716,12 @@ def multiresolution(g: WilsonGraph, steps=5) -> (List[float], List[float], List[
 def multi_reconstr(graph_list: List[WilsonGraph], q_prime_list: List[float], modify_list=False):
     if not modify_list:
         graph_list = copy.deepcopy(graph_list)
-    graph_list[-1].set_non_root_values_to_zero()
-    graph_list[-1].reconstruction_operator(q_prime_list[-1])
+    # graph_list[-1].set_non_root_values_to_zero()
+    graph_list[-1].reconstruction_operator_without_detail_nodes(q_prime_list[-1])
     for i in reversed(range(len(graph_list) - 1)):
-        graph_list[i].set_all_values_to_zero()
+        # graph_list[i].set_all_values_to_zero()
         graph_list[i].copy_values_from_other_graph_wherever_they_exist(graph_list[i + 1])
-        graph_list[i].reconstruction_operator(q_prime_list[i])
+        graph_list[i].reconstruction_operator_without_detail_nodes(q_prime_list[i])
     return graph_list
 
 
