@@ -587,6 +587,12 @@ class WilsonGraph(nx.DiGraph):
         return minimizer_q, minimizer_root_set
 
     def _find_q_prime(self, q, L_Schur=None):
+        """
+        Computes a good value of q_prime for downsampling
+        :param q:
+        :param L_Schur:
+        :return (q_prime,downsampled_graph): q_prime and the downsampled graph
+        """
         if L_Schur is None:
             L_Schur = self.compute_Schur_complement()
         downsampled_graph = create_graph_from_matrix(L_Schur, original_graph=self)
@@ -755,3 +761,4 @@ def create_graph_from_matrix(mat, original_graph=None):
         #             g.add_edge(x, y, weight=mat[
         #                 original_graph.nodes[x]['node_number'], original_graph.nodes[y]['node_number']], hidden=False)
     return g
+

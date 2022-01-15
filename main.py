@@ -630,4 +630,10 @@ def runtime_test_Schur_complement():
 
 
 if __name__ == '__main__':
-    visualize_multiresolution()
+    g100=square_graph.SquareWilson(100,standardweights=False)
+    g100.wilson(1.23456)
+    print(len(g100.roots))
+    L_Schur=g100.compute_Schur_complement()
+    dgg=wilson.create_graph_from_matrix(L_Schur, g100)
+    dgg.show('dgg.html')
+    L_Schur=dgg.compute_Schur_complement()
