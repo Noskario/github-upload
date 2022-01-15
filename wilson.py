@@ -490,10 +490,24 @@ class WilsonGraph(nx.DiGraph):
         mat_uu = self.create_Laplacian(selected_rows='non-roots', selected_cols='non-roots')
 
         mat_uu_inv = scipy.sparse.linalg.inv(mat_uu)
-        if mat_uu_inv.shape == (1,):
+        if mat_uu_inv.shape == (1,):  # Make sure it stays a matrix and does not get compressed to scalar
             mat_uu_inv = scipy.sparse.csc_matrix(mat_uu_inv.reshape((1, 1)))
 
-        return mat_qq - mat_qu @ mat_uu_inv @ mat_uq
+        result = mat_qq - mat_qu @ mat_uu_inv @ mat_uq
+
+        # Now we have to make it sparser if we want to have reasonable runtimes.
+        # Without any mathematical rigour I will do as follows:
+        # I compute the sum of all edges and set all elements to zero that have a weight smaller than 10e-10 of that
+        arr = np.array(result.toarray())
+        weight_of_all_edges = -arr.trace()
+        arr = np.where(arr < 10e-10 * weight_of_all_edges, 0, arr)
+        # Now we have to correct the values on the diagonal
+        # compute row-sum
+        row_sum = arr.sum(1)
+        np.fill_diagonal(arr, -row_sum)
+        result = scipy.sparse.csc_matrix(arr)
+
+        return result
 
     def convert_values_to_np_array(self):
         n = len(self.nodes)
@@ -761,4 +775,3 @@ def create_graph_from_matrix(mat, original_graph=None):
         #             g.add_edge(x, y, weight=mat[
         #                 original_graph.nodes[x]['node_number'], original_graph.nodes[y]['node_number']], hidden=False)
     return g
-
