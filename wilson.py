@@ -12,13 +12,17 @@ import numpy as np
 from typing import List
 
 
-class WilsonGraph(nx.DiGraph):
+class SignalProcessingGraph(nx.DiGraph):
     def __init__(self):
         super().__init__()
         self.weights_are_set = False
         self.roots = set()
 
     def set_weights(self):
+        """
+        Computes all vertex degrees. Also computes the maximal vertex degree
+        :return: Nothing. Vertex degree is stored in the 'weight' attribute of all nodes, maximal vertex degree in the 'alpha' attribute of the graph
+        """
         weightlist = []
         for v in self.nodes:
             w = self.get_node_weight(v)
@@ -28,9 +32,9 @@ class WilsonGraph(nx.DiGraph):
         self.graph['alpha'] = alpha
         self.weights_are_set = True
 
-    def LERW(self, start, sinks, q=0):
+    def LERW(self, start, sinks, q=0):  # loop erased random walk
         activenodeid = start
-        # Jetzt starte Skelettprozess (künstlich beschleunigt, indem alpha durch w(x) ersetzt)
+        # Start skeleton process (sped up by exchangin alpha by w(x))
         trajectory = [start]
         while True:
             r = random.random()
@@ -39,7 +43,6 @@ class WilsonGraph(nx.DiGraph):
                 return trajectory
             chosennodeid = activenodeid
             temp = q
-            # print('~',end='')
             for nbr in self[activenodeid]:
                 temp += self[activenodeid][nbr]['weight']
                 if r < temp / (self.nodes[activenodeid]['weight'] + q):
@@ -57,57 +60,21 @@ class WilsonGraph(nx.DiGraph):
                 trajectory.append(chosennodeid)
                 activenodeid = chosennodeid
 
-    # def wilson(self, q, sinks=None, reformat_graph=True, renumber_roots_after_finishing=True):
-    #     """Applies Wilson's Algorithm to a given graph with given sinks and killing rate q
-    #     Wilson's Algorithm outputs a random forest obeying a specific distribution
-    #
-    #     returns a graph where roots of the forest are orange/black and vertices, that are no roots are navy/blue"""
-    #     # Graph vorbereiten, auf Standardwerte setzen
-    #     if sinks is None:
-    #         sinks = []
-    #     sinks = set(sinks)
-    #     if reformat_graph:
-    #         self.roots = copy.copy(sinks)
-    #         for e in self.edges:
-    #             self.edges[e]['hidden'] = True
-    #         # self.show('test.html')
-    #     temp_time = time.time()
-    #     if not self.weights_are_set:
-    #         self.set_weights()
-    #
-    #     activenodes = (set(self.nodes) - sinks)
-    #     counter = 0
-    #     edges_that_form_the_spanning_forest = []
-    #     temp_time1 = 0
-    #     while bool(activenodes):
-    #         counter += 1
-    #         # choose an arbitrary vertex and start a LERW
-    #         start = activenodes.pop()
-    #         activenodes.add(start)
-    #         path = self.LERW(start, sinks, q)
-    #         temp = time.time()
-    #         for i in range(len(path) - 1):
-    #             self.edges[path[i], path[i + 1]]['hidden'] = False
-    #         temp_time1 += time.time() - temp
-    #         # Vertices of the path are now also sinks, since they belong to the constructed random forest
-    #         sinks.update(path)
-    #         for n in path:
-    #             activenodes.discard(n)
-    #
-    #     # print('counter=', counter)
-    #     # print('wison_graphic', temp_time1)
-    #     wilson_time = time.time() - temp_time
-    #     # print('wison_without_graphics', wilson_time - temp_time1)
-    #     # print('wison', wilson_time)
-    #     if renumber_roots_after_finishing:
-    #         self.number_the_nodes()
-    #     return edges_that_form_the_spanning_forest
     def wilson(self, q: float, roots: set = None, ):
+        """
+        Applies Wilson's algorithm on the graph
+        :param q: exponential killing time
+        :param roots: a priori sinks
+        :return: nothing, but the 'hidden'-attribute of edges gets changed
+        """
         self.stack_version_of_wilson(q, renumber_roots_after_finishing=True, start_from_scratch=True, roots=roots)
 
     def show(self, graphname, color_roots=True, minimum=None, maximum=None):
         """
         :param graphname: has to have the format "name_of_graph.html"
+        :param color_roots: If true then roots are shown darker than non-roots. If false colors are derived from value on the vertices
+        :param maximum: maximum value for color scheme if color_roots=False
+        :param minimum: minimum value for color scheme if color_roots=False
         :return: does not return anything, but draws the graph creating an html-file
         """
         h = pyvis.network.Network('800px', '1000px')
@@ -135,10 +102,17 @@ class WilsonGraph(nx.DiGraph):
         h.show_buttons()
         h.toggle_physics(False)
         h.show(graphname)
+        # h.show() writes a html-file and tells a browser to open it. In case you change the graph and use
+        # show() it again the browser might mix up the old and the new html-files so you see wrong results.
+        # So the sleep statement is supposed to give the browser the time to load the html-file completely
+        # before it might changed again by another show().
         time.sleep(.2)
 
-    def create_pdf(self, filename='graph.pdf', color_using_roots=True, print_values=False, show_immediately=False,
-                   colorbar=True, colorbar_for_edges=False, **kwargs):
+    def create_picture(self, filename='graph.pdf', color_using_roots=True, print_values=False, show_immediately=False,
+                       colorbar=True, colorbar_for_edges=False, colorbar_position=None, **kwargs):
+        """
+        Creates a picture of the graph. Allows you to draw arrows for edges.
+        """
         plt.clf()
         if print_values:
             kwargs['labels'] = {n: "%.2g" % self.nodes[n]['value'] for n in self.nodes}
@@ -173,18 +147,21 @@ class WilsonGraph(nx.DiGraph):
             vmax = kwargs['vmax']
             if colorbar:
                 sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin, vmax))
-                plt.colorbar(sm)
+                plt.colorbar(sm, location=colorbar_position)
             if colorbar_for_edges:
                 if 'edge_cmap' not in kwargs:
                     kwargs['edge_cmap'] = plt.cm.viridis_r
                 edge_cmap = kwargs['edge_cmap']
+                if 'edgelist' not in kwargs:
+                    kwargs['edgelist'] = self.edges
                 if 'edge_color' not in kwargs:
-                    kwargs['edge_color'] = [self.edges[e]['weight'] for e in self.edges]
+                    kwargs['edge_color'] = [self.edges[e]['weight'] for e in kwargs['edgelist']]
                 edge_color = kwargs['edge_color']
                 edge_vmin = min(edge_color)
                 edge_vmax = max(edge_color)
                 sm = plt.cm.ScalarMappable(cmap=edge_cmap, norm=plt.Normalize(edge_vmin, edge_vmax))
-                plt.colorbar(sm)
+
+                plt.colorbar(sm, location=colorbar_position)
 
             if 'edgelist' not in kwargs:
                 kwargs['edgelist'] = []
@@ -206,9 +183,12 @@ class WilsonGraph(nx.DiGraph):
         if show_immediately:
             plt.show()
 
-    def create_pdf_using_custom_color_scheme(self, filename='graph.pdf', show_immediately=False, title=None, ticks=None,
-                                             colorbar=True,
-                                             **kwargs):
+    def create_picture_only_vertices(self, filename='graph.pdf', show_immediately=False, title=None, ticks=None,
+                                     colorbar=True, colorbar_position=None,
+                                     **kwargs):
+        """
+        Draws the nodes. Is appropiate for big graphs where drawing all edges is too slow/clumsy.
+        """
         plt.clf()
 
         if 'norm' not in kwargs:  # vmin and vmax are not allowed if a color-norm is already given
@@ -235,20 +215,31 @@ class WilsonGraph(nx.DiGraph):
         )
         plt.axis('equal')
         if colorbar:
-            plt.colorbar(ticks=ticks)
+            plt.colorbar(ticks=ticks, location=colorbar_position)
         plt.axis('off')
         plt.box(False)
         plt.savefig(filename, bbox_inches='tight')
         if show_immediately:
             plt.show()
 
-    def get_node_weight(self, node):
+    def get_node_weight(self, node) -> float:
+        """
+        Computes vertex degree of vertex
+        
+        :param node: 
+        :return: vertex degree
+        """
         nodeweight = 0
         for e in self.edges(node):
             nodeweight += self.edges[e]['weight']
         return nodeweight
 
     def choose_random_neighbor(self, node):
+        """
+        Choose random neighbor according to weights
+        :param node:
+        :return: id of chosen node
+        """
         if not self.weights_are_set:
             self.set_weights()
         nodeweight = self.nodes[node]['weight']
@@ -261,29 +252,46 @@ class WilsonGraph(nx.DiGraph):
         raise 'No neighbor chosen. That is strange.'
 
     def color_roots(self):
+        """
+        Changes color-attribute of roots to darkred, all other vertices are colored palevioletred
+        :return:
+        """
         for v in self.nodes:
             self.nodes[v]['color'] = 'palevioletred'
         for v in self.roots:
             self.nodes[v]['color'] = 'darkred'
 
-    def get_maximum_value(self):
+    def get_maximum_value(self) -> float:
+        """
+        Computes maximum value among all vertices
+        :return: maximum vertex value
+        """
         l = []
         for v in self.nodes:
             l.append(self.nodes[v]['value'])
         return max(l)
 
-    def get_minimum_value(self):
+    def get_minimum_value(self) -> float:
+        """
+        Computes minimum value among all vertices
+        :return: minimum vertex value
+        """
         l = []
         for v in self.nodes:
             l.append(self.nodes[v]['value'])
         return min(l)
 
     def color_using_values(self, maximum=None, minimum=None):
+        """
+        Colors all vertices according to their values using coolwarm colorscheme. Maximum and minimum will be changed
+         in order to ensure that maximum==-minimum and that both have modulus of at least one.
+
+        """
         if maximum is None:
             maximum = self.get_maximum_value()
         if minimum is None:
             minimum = self.get_minimum_value()
-        # begin: Damit null weiß wird
+        # begin: achieve that zero gets white/neutral color
         minimum = min(minimum, -1)
         maximum = max(maximum, 1)
         minimum = min(minimum, -maximum)
@@ -294,15 +302,15 @@ class WilsonGraph(nx.DiGraph):
         for v in self.nodes:
             self.nodes[v]['color'] = matplotlib.colors.to_hex(cmap(norm(self.nodes[v]['value'])))
 
-    def _process_activated_node2(self, x, q2):
+    def _process_activated_node(self, x, q2):
         """
-        :param x:
-        :param q2:
-        :return:
+        Process activated node when we couple random forests and compute forest with new parameter q2<q_old
+        :param x: activated node
+        :param q2: new parameter
+        :return: number of reprocessed vertices
         """
         number_of_reprocessed_nodes = 0
         chosen_nbr = self.choose_random_neighbor(x)
-        # self.show(f'process_activated_node2({x=}---{chosen_nbr=}).html')
         y = chosen_nbr
         trajectory = [x, y]
         # We follow the already uncovered arrows until we either walk a loop
@@ -316,38 +324,36 @@ class WilsonGraph(nx.DiGraph):
                     break
             # Did we do a loop? Did we go to another root?
             if y == x:  # Loop
-                # In this case we have to remove the loop and do t
+                # In this case we have to remove the loop and reprocess the activated tree
                 tree_of_x = self._get_tree_of_root(x)
                 number_of_reprocessed_nodes += len(tree_of_x)
                 self.roots.remove(x)
                 for i in range(len(trajectory) - 1):
                     self.edges[trajectory[i], trajectory[i + 1]]['hidden'] = True
-                # self.show(f'first_trajectory_is_a_loop:_{str(trajectory).replace(" ","_")}.html')
                 self.stack_version_of_wilson(q=q2, active_nodes=tree_of_x)
                 break
             elif y in self.roots:  # Another root
                 number_of_reprocessed_nodes += 1
                 self.edges[x, chosen_nbr]['hidden'] = False
                 self.roots.remove(x)
-                # print(f'First trajectory goes to root: {trajectory}')
                 break
-        # print(f'{number_of_reprocessed_nodes=}')
-        # self.show('Funktionstest_der_verbesserten_gekoppelten_Variante.html')
         return number_of_reprocessed_nodes
 
     def _coupled_q_next(self, q):
+        """
+        Compute new tree in coupling process
+        :param q:
+        :return:
+        """
         r = random.random()
         m = len(self.roots)
         alpha = self.graph['alpha']
         q_next = alpha / (r ** (-1 / m) * ((alpha + q) / q) - 1)
         x = random.choice(list(self.roots))
-        # print('\nMache die Sache neu mit x=', x)
-        # self.show('coupling_step.html')
-        self._process_activated_node2(x, q_next)
-        # print(f'{q_next =}')
+        self._process_activated_node(x, q_next)
         return q_next
 
-    def coupled_cont(self, qmax, q_stop):
+    def coupled_cont(self, qmax, q_stop)->float:
         q = qmax
         self.stack_version_of_wilson(q, renumber_roots_after_finishing=False, start_from_scratch=True)
         while q > q_stop:
@@ -482,7 +488,7 @@ class WilsonGraph(nx.DiGraph):
         mat = self.create_Laplacian(selected_rows=selected_rows, selected_cols=selected_cols)
         return mat.toarray()
 
-    def compute_Schur_complement(self):
+    def compute_Schur_complement(self, make_sparse=True):
         # self.show('test.html')
         mat_qq = self.create_Laplacian(selected_rows='roots', selected_cols='roots')
         mat_qu = self.create_Laplacian(selected_rows='roots', selected_cols='non-roots')
@@ -494,18 +500,18 @@ class WilsonGraph(nx.DiGraph):
             mat_uu_inv = scipy.sparse.csc_matrix(mat_uu_inv.reshape((1, 1)))
 
         result = mat_qq - mat_qu @ mat_uu_inv @ mat_uq
-
-        # Now we have to make it sparser if we want to have reasonable runtimes.
-        # Without any mathematical rigour I will do as follows:
-        # I compute the sum of all edges and set all elements to zero that have a weight smaller than 10e-10 of that
-        arr = np.array(result.toarray())
-        weight_of_all_edges = -arr.trace()
-        arr = np.where(arr < 10e-10 * weight_of_all_edges, 0, arr)
-        # Now we have to correct the values on the diagonal
-        # compute row-sum
-        row_sum = arr.sum(1)
-        np.fill_diagonal(arr, -row_sum)
-        result = scipy.sparse.csc_matrix(arr)
+        if make_sparse:
+            # Now we have to make it sparser if we want to have reasonable runtimes.
+            # Without any mathematical rigour I will do as follows:
+            # I compute the sum of all edges and set all elements to zero that have a weight smaller than 10e-10 of that
+            arr = np.array(result.toarray())
+            weight_of_all_edges = -arr.trace()
+            arr = np.where(arr < 10e-10 * weight_of_all_edges, 0, arr)
+            # Now we have to correct the values on the diagonal
+            # compute row-sum
+            row_sum = arr.sum(1)
+            np.fill_diagonal(arr, -row_sum)
+            result = scipy.sparse.csc_matrix(arr)
 
         return result
 
@@ -712,7 +718,7 @@ class WilsonGraph(nx.DiGraph):
         return nbr
 
 
-def multiresolution(g: WilsonGraph, steps=5) -> (List[float], List[float], List[WilsonGraph]):
+def multiresolution(g: SignalProcessingGraph, steps=5) -> (List[float], List[float], List[SignalProcessingGraph]):
     """
 
     :param g: Graph that gets analyzed
@@ -733,7 +739,7 @@ def multiresolution(g: WilsonGraph, steps=5) -> (List[float], List[float], List[
     return q_list, q_prime_list, graph_list
 
 
-def multi_reconstr(graph_list: List[WilsonGraph], q_prime_list: List[float], modify_list=False):
+def multi_reconstr(graph_list: List[SignalProcessingGraph], q_prime_list: List[float], modify_list=False):
     if not modify_list:
         graph_list = copy.deepcopy(graph_list)
     # graph_list[-1].set_non_root_values_to_zero()
@@ -745,7 +751,7 @@ def multi_reconstr(graph_list: List[WilsonGraph], q_prime_list: List[float], mod
     return graph_list
 
 
-def multi_resolution_and_reconstr(g: WilsonGraph, steps=5):
+def multi_resolution_and_reconstr(g: SignalProcessingGraph, steps=5):
     g.show('g.html', color_roots=False)
     q_list, q_prime_list, graph_list = multiresolution(g, steps)
     # print(f'{q_list=}')
@@ -754,7 +760,7 @@ def multi_resolution_and_reconstr(g: WilsonGraph, steps=5):
 
 
 def create_graph_from_matrix(mat, original_graph=None):
-    g = WilsonGraph()
+    g = SignalProcessingGraph()
     if original_graph is None:
         raise Exception('Procedure not yet written')
     if original_graph is not None:
