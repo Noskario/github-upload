@@ -21,7 +21,8 @@ class SignalProcessingGraph(nx.DiGraph):
     def set_weights(self):
         """
         Computes all vertex degrees. Also computes the maximal vertex degree
-        :return: Nothing. Vertex degree is stored in the 'weight' attribute of all nodes, maximal vertex degree in the 'alpha' attribute of the graph
+        :return: Nothing. Vertex degree is stored in the 'weight' attribute of all nodes, maximal vertex degree in
+         the 'alpha' attribute of the graph
         """
         weightlist = []
         for v in self.nodes:
@@ -33,6 +34,14 @@ class SignalProcessingGraph(nx.DiGraph):
         self.weights_are_set = True
 
     def LERW(self, start, sinks, q=0):  # loop erased random walk
+        """
+        Samples a loop erased random walk started in some vertex with given sinks and q. I is not needed if you use the
+         Diaconis Fulton stack representation to sample random spanning forests
+        :param start: vertex where to start the random walks
+        :param sinks: sinks for the random walk
+        :param q: parameter for exponential killing time
+        :return: trajectory of random walk
+        """
         activenodeid = start
         # Start skeleton process (sped up by exchangin alpha by w(x))
         trajectory = [start]
@@ -62,7 +71,7 @@ class SignalProcessingGraph(nx.DiGraph):
 
     def wilson(self, q: float, roots: set = None, ):
         """
-        Applies Wilson's algorithm on the graph
+        Applies Wilson's algorithm on the graph. Samples a random spanning forest.
         :param q: exponential killing time
         :param roots: a priori sinks
         :return: nothing, but the 'hidden'-attribute of edges gets changed
@@ -71,6 +80,7 @@ class SignalProcessingGraph(nx.DiGraph):
 
     def show(self, graphname, color_roots=True, minimum=None, maximum=None):
         """
+        Creates an interactive html-image of the graph and opens it
         :param graphname: has to have the format "name_of_graph.html"
         :param color_roots: If true then roots are shown darker than non-roots. If false colors are derived from value on the vertices
         :param maximum: maximum value for color scheme if color_roots=False
@@ -187,7 +197,7 @@ class SignalProcessingGraph(nx.DiGraph):
                                      colorbar=True, colorbar_position=None,
                                      **kwargs):
         """
-        Draws the nodes. Is appropiate for big graphs where drawing all edges is too slow/clumsy.
+        Draws the nodes (ignores edges). Is appropiate for big graphs where drawing all edges is too slow/clumsy.
         """
         plt.clf()
 
@@ -339,11 +349,11 @@ class SignalProcessingGraph(nx.DiGraph):
                 break
         return number_of_reprocessed_nodes
 
-    def _coupled_q_next(self, q):
+    def _coupled_q_next(self, q) -> float:
         """
         Compute new tree in coupling process
-        :param q:
-        :return:
+        :param q: q-value of which we have a sample given
+        :return: new q-value, for which a new sample is produced
         """
         r = random.random()
         m = len(self.roots)
@@ -353,7 +363,14 @@ class SignalProcessingGraph(nx.DiGraph):
         self._process_activated_node(x, q_next)
         return q_next
 
-    def coupled_cont(self, qmax, q_stop)->float:
+    def coupled_cont(self, qmax, q_stop) -> float:
+        """
+        Runs a whole coupling process starting at qmax and stopped at q-stop. Does not store any results.
+         There is no real use-case except for testing purposes.
+        :param qmax: q where to start the coupling process
+        :param q_stop: lower threshold for q to stop coupling
+        :return: the value of q when we get the first time below q_stop
+        """
         q = qmax
         self.stack_version_of_wilson(q, renumber_roots_after_finishing=False, start_from_scratch=True)
         while q > q_stop:
@@ -361,19 +378,25 @@ class SignalProcessingGraph(nx.DiGraph):
         self.number_the_nodes()
         return q
 
-    def get_tree_predecessors(self, node):
+    def get_predecessors_of_node(self, node) -> set:
+        """
+        finds all vertices that have uncovered edges pointing to the given vertex
+        :param node:
+        :return: set of all vertices that have a visible edge pointing to the given vertex
+        """
         s = set()
-        # print(f'{node=}')
-        # print(f'{self.roots}')
         for nbr in self.predecessors(node):
             if self.edges[nbr, node]['hidden'] == False:
                 s.add(nbr)
-        # print(f'~~~{s=}')
         return s
 
-    def _get_tree_of_root(self, node):
+    def _get_tree_of_root(self, node) -> set:
+        """
+        returns the set of all nodes with uncovered paths to given node
+        :param node:
+        :return: the set of all nodes with uncovered paths to given node
+        """
         counter = 0
-        # self.show('gettreeofroot.html')
         explorer_set = set()
         explorer_set.add(node)
         explored_set = set()
@@ -381,22 +404,27 @@ class SignalProcessingGraph(nx.DiGraph):
         while explorer_set:
             counter += 1
             if counter > len(self.nodes):
+                # In this case there is a loop somewhere. There is no way it could take longer to
+                # collect all vertices of a tree than  there are nodes in the graph
                 for e in self.edges:
                     print(e, self.edges[e])
                 print(f'{self.roots=}')
-                print(explorer_set)
+                print(f'{explorer_set=}')
                 self.show('error.html')
-                raise "Tree was not really a tree..."
-            # print(f'{explorer_set=}')
+                raise Exception(f"The set of vertices that eventually lead to vertex {node} contains a loop.")
             for x in explorer_set:
-                aux_set.update(self.get_tree_predecessors(x))
+                aux_set.update(self.get_predecessors_of_node(x))
                 explored_set.add(x)
-            # print(f'{explored_set=}')
             explorer_set = aux_set
             aux_set = set()
         return explored_set
 
     def number_the_nodes(self):
+        """
+        Numbers consecutively all vertices. Let m the number of roots, n the number of vertices. Then roots
+         will get numbers 0..m-1, non roots m..n-1
+        :return: number of all nodes
+        """
         i = 0
         for node in self.roots:
             self.nodes[node]['node_number'] = i
@@ -406,41 +434,13 @@ class SignalProcessingGraph(nx.DiGraph):
             i += 1
         return i
 
-    def create_Laplacian2(self, selected_rows='all', selected_cols='all'):
-        # Does the the same as create_Laplcian and is easier to read but 4 times slower, so I do not use it
-        if selected_cols not in ['all', 'roots', 'non-roots']:
-            raise ValueError("Only 'all', 'roots', 'non-roots' are accepted as arguments")
-        if selected_rows not in ['all', 'roots', 'non-roots']:
-            raise ValueError("Only 'all', 'roots', 'non-roots' are accepted as arguments")
-        if not self.weights_are_set:
-            self.set_weights()
-        cols = set(self.nodes)
-        col_index_shift = 0
-        if selected_cols == 'roots':
-            cols = (self.roots)
-        if selected_cols == 'non-roots':
-            cols -= set(self.roots)
-            col_index_shift = len(self.roots)
-        rows = set(self.nodes)
-        row_index_shift = 0
-        if selected_rows == 'roots':
-            rows = (self.roots)
-        if selected_rows == 'non-roots':
-            rows -= (self.roots)
-            row_index_shift = len(self.roots)
-        mat = scipy.sparse.dok_matrix((len(rows), len(cols)), dtype=np.float64)
-        for n in rows:
-            for nbr in self[n]:
-                if nbr in cols:
-                    mat[self.nodes[n]['node_number'] - row_index_shift, self.nodes[nbr][
-                        'node_number'] - col_index_shift] = self.edges[n, nbr]['weight']
-        if selected_rows == selected_cols:
-            for n in rows:
-                mat[self.nodes[n]['node_number'] - row_index_shift, self.nodes[n]['node_number'] - row_index_shift] = - \
-                    self.nodes[n]['weight']
-        return mat.tocsc()
-
     def create_Laplacian(self, selected_rows='all', selected_cols='all') -> scipy.sparse.csc_matrix:
+        """
+        Creates sparse matrix that is the Laplacian of the graph restricted to given rows and columns
+        :param selected_rows: must be in ['all', 'roots', 'non-roots']
+        :param selected_cols: must be in ['all', 'roots', 'non-roots']
+        :return: (restricted) Laplacian
+        """
         if selected_cols not in ['all', 'roots', 'non-roots']:
             raise ValueError("Only 'all', 'roots', 'non-roots' are accepted as arguments")
         if selected_rows not in ['all', 'roots', 'non-roots']:
@@ -484,12 +484,12 @@ class SignalProcessingGraph(nx.DiGraph):
                                       dtype=float)
         return mat
 
-    def convert_to_numpy_matrix(self, selected_rows='all', selected_cols='all'):
-        mat = self.create_Laplacian(selected_rows=selected_rows, selected_cols=selected_cols)
-        return mat.toarray()
-
-    def compute_Schur_complement(self, make_sparse=True):
-        # self.show('test.html')
+    def compute_Schur_complement(self, make_sparse=True) -> scipy.sparse.csc.csc_matrix:
+        """
+        Computes the Schur complement (sparsified, for performance improvements)
+        :param make_sparse: if True, only keep important edges
+        :return:
+        """
         mat_qq = self.create_Laplacian(selected_rows='roots', selected_cols='roots')
         mat_qu = self.create_Laplacian(selected_rows='roots', selected_cols='non-roots')
         mat_uq = self.create_Laplacian(selected_rows='non-roots', selected_cols='roots')
@@ -516,13 +516,21 @@ class SignalProcessingGraph(nx.DiGraph):
         return result
 
     def convert_values_to_np_array(self):
+        """
+        computes numpy array with all the values. The order of the vertices is defined by their 'node_number'
+        :return: numpy-array of shape (n,) filled with the values of the vertices of the graph
+        """
         n = len(self.nodes)
-        mat = np.zeros(n)
+        value_vector = np.zeros(n)
         for node in self.nodes:
-            mat[self.nodes[node]['node_number']] = self.nodes[node]['value']
-        return mat
+            value_vector[self.nodes[node]['node_number']] = self.nodes[node]['value']
+        return value_vector
 
     def analysis_operator(self, q):
+        """
+        analyzes the signal (changes the values in-place)
+        :param q: parameter for exponential killing time
+        """
         n = len(self.nodes)
         m = len(self.roots)
         L = self.create_Laplacian()
@@ -530,12 +538,15 @@ class SignalProcessingGraph(nx.DiGraph):
         f = self.convert_values_to_np_array()
         f_analysed = scipy.sparse.linalg.spsolve(A, f)
         f_analysed[m:] -= f[m:]
-        # self.show('original.html', color_roots=False)
         for node in self.nodes:
             self.nodes[node]['value'] = f_analysed[self.nodes[node]['node_number']]
-        # self.show('ana.html', color_roots=False)
 
     def reconstruction_operator(self, q, L_Schur=None):
+        """
+        reconstructs the signal (changes the values in-place)
+        :param q: parameter for exponential killing time
+        :param L_Schur: Schur complement. If not provided it will be computed.
+        """
         f_ana = self.convert_values_to_np_array()
         m = len(self.roots)
         n = len(self.nodes)
@@ -555,13 +566,18 @@ class SignalProcessingGraph(nx.DiGraph):
             self.nodes[node]['value'] = f[self.nodes[node]['node_number']]
 
     def reconstruction_operator_without_detail_nodes(self, q, L_Schur=None):
+        """
+        reconstructs the signal but only taking into account the approxmative vertices (changes the values in-place)
+        :param q: parameter for exponential killing time
+        :param L_Schur: Schur complement. If not provided it will be computed.
+        """
         f_ana = self.convert_values_to_np_array()
         m = len(self.roots)
         n = len(self.nodes)
         f_bar = f_ana[:m]
         # f_breve = f_ana[m:]
         L_breve_breve = self.create_Laplacian(selected_rows='non-roots', selected_cols='non-roots')
-        L_bar_breve = self.create_Laplacian(selected_rows='roots', selected_cols='non-roots')
+        # L_bar_breve = self.create_Laplacian(selected_rows='roots', selected_cols='non-roots')
         L_breve_bar = self.create_Laplacian(selected_rows='non-roots', selected_cols='roots')
         if L_Schur is None:
             L_Schur = self.compute_Schur_complement()
@@ -590,27 +606,32 @@ class SignalProcessingGraph(nx.DiGraph):
     def alpha_bar_approx(self, q):
         return q * (len(self.nodes) - len(self.roots)) / (1 + len(self.roots))
 
-    def _find_q(self, theta_1, theta_2):
-        qmax, q_stop = theta_2 * self.graph['alpha'], theta_1 * self.graph['alpha']
+    def _find_q(self, theta1, theta2) -> float:
+        """
+        Computes a good value of q for downsampling
+        :param theta1: helps to adjust the lower bound for q
+        :param theta2: helps to adjust the upper bound for q
+        :return: minimizer_q: the best q
+        """
+        qmax, q_stop = theta2 * self.graph['alpha'], theta1 * self.graph['alpha']
         q = qmax
         minimizer_q = qmax
         self.stack_version_of_wilson(qmax, renumber_roots_after_finishing=False, start_from_scratch=True)
         temp = self.alpha_bar_approx(q) * self.gamma_inverse_approx(q)
-        minimizer_root_set = copy.copy(self.roots)
         while q > q_stop:
             q = self._coupled_q_next(q)
             if self.alpha_bar_approx(q) * self.gamma_inverse_approx(q) < temp:
                 minimizer_q = q
-                minimizer_root_set = copy.copy(self.roots)
                 temp = self.alpha_bar_approx(q) * self.gamma_inverse_approx(q)
         self.number_the_nodes()
-        return minimizer_q, minimizer_root_set
+        return minimizer_q
 
     def _find_q_prime(self, q, L_Schur=None):
         """
-        Computes a good value of q_prime for downsampling
-        :param q:
-        :param L_Schur:
+        Computes downsampled graph (using paramter q) and computes a good value of q_prime for siganl processing on
+         this downsampled graph
+        :param q: parameter for downsampling
+        :param L_Schur: Schur complement (will be computed if not provided)
         :return (q_prime,downsampled_graph): q_prime and the downsampled graph
         """
         if L_Schur is None:
@@ -624,15 +645,23 @@ class SignalProcessingGraph(nx.DiGraph):
         for n in self.nodes:
             try:
                 self.nodes[n]['value'] = copy.deepcopy(g.nodes[n]['value'])
-                # print(type(g.nodes[n]['value']))
             except KeyError:
                 pass
 
     def one_step_in_multiresolution_scheme(self, theta1=.2, theta2=1, name_of_graph='downsampled',
                                            show_created_graph=False):
+        """
+        Computes a good good parameter q for downsampling and then the downsampled graph. Computes a good parameter
+         q_prime for sharpness of the analyzing step.
+        :param theta1: helps to adjust the lower bound for q
+        :param theta2: helps to adjust the upper bound for q
+        :param name_of_graph: name of html if the downdampled graph is shown
+        :param show_created_graph: if True the downsampled graph is shown
+        :return:
+        """
         if not self.weights_are_set:
             self.set_weights()
-        q, _ = self._find_q(theta1, theta2)
+        q = self._find_q(theta1, theta2)
         self.stack_version_of_wilson(q, renumber_roots_after_finishing=True, start_from_scratch=True)
         L_Schur = self.compute_Schur_complement()
         q_prime, downsampled_graph = self._find_q_prime(q, L_Schur)
@@ -645,11 +674,13 @@ class SignalProcessingGraph(nx.DiGraph):
     def stack_version_of_wilson(self, q, active_nodes: set = 'all', renumber_roots_after_finishing=False,
                                 start_from_scratch=False, roots=None):
         """
-        :param q:
+        Stack version of Wilson's algorithm
+        :param q: parameter of exponential killing time
         :param active_nodes: Set of nodes that are still active. Also 'all' is accepted.
         :param renumber_roots_after_finishing:
         :param start_from_scratch: set True if you want to delete all uncovered edges/roots and start all over
-        :param roots: in case you start from scratch give the a priori roots here. Must be a set. Argument is ignored if start_from_scratch=True
+        :param roots: in case you start from scratch give the a priori roots here. Must be a set. Argument is ignored
+         if start_from_scratch=True
         :return:
         """
         if not self.weights_are_set:
@@ -704,7 +735,12 @@ class SignalProcessingGraph(nx.DiGraph):
             self.number_the_nodes()
 
     def follow_arrow_if_exist_else_create_arrow_and_follow_or_get_killed(self, start, q):
-        result = None
+        """
+        Goes one step in the stack version of Wilson's algorithm
+        :param start: vertex where we are right now
+        :param q: parameter of exponential killing time
+        :return: next vertex where to go or None if we get killed in the current vertex
+        """
         for nbr in self[start]:
             if self.edges[start, nbr]['hidden'] == False:
                 return nbr
@@ -720,7 +756,7 @@ class SignalProcessingGraph(nx.DiGraph):
 
 def multiresolution(g: SignalProcessingGraph, steps=5) -> (List[float], List[float], List[SignalProcessingGraph]):
     """
-
+    Computes all downsamplings and analyzes them according to appropiate parameters.
     :param g: Graph that gets analyzed
     :param steps: number of steps
     :return: list of all downsampled graphs, list of all q_prime's, list of all q's
@@ -739,30 +775,45 @@ def multiresolution(g: SignalProcessingGraph, steps=5) -> (List[float], List[flo
     return q_list, q_prime_list, graph_list
 
 
-def multi_reconstr(graph_list: List[SignalProcessingGraph], q_prime_list: List[float], modify_list=False):
-    if not modify_list:
+def multi_reconstr(graph_list: List[SignalProcessingGraph], q_prime_list: List[float], modify_graph_list=False):
+    """
+    Reconstructs the result of the multiresolution-function (ignoring the detail vertices)
+    :param graph_list: list of downsampled graphs with analyzed signals
+    :param q_prime_list: list of parameters used for the analysis operator
+    :param modify_graph_list: whether to keep the list of analyzed graphs or to overwrite their signals
+    :return: list of graphs with recontructed signal
+    """
+    if not modify_graph_list:
         graph_list = copy.deepcopy(graph_list)
-    # graph_list[-1].set_non_root_values_to_zero()
     graph_list[-1].reconstruction_operator_without_detail_nodes(q_prime_list[-1])
     for i in reversed(range(len(graph_list) - 1)):
-        # graph_list[i].set_all_values_to_zero()
         graph_list[i].copy_values_from_other_graph_wherever_they_exist(graph_list[i + 1])
         graph_list[i].reconstruction_operator_without_detail_nodes(q_prime_list[i])
     return graph_list
 
 
 def multi_resolution_and_reconstr(g: SignalProcessingGraph, steps=5):
+    """
+    Computes the multi resolution scheme of a graphs and reconstructs it
+    :param g: Graph that gets analyzed
+    :param steps: number of steps
+    """
     g.show('g.html', color_roots=False)
     q_list, q_prime_list, graph_list = multiresolution(g, steps)
-    # print(f'{q_list=}')
-    # print(f'{q_prime_list=}')
     multi_reconstr(graph_list, q_prime_list)
 
 
-def create_graph_from_matrix(mat, original_graph=None):
+def create_graph_from_matrix(mat, original_graph=None)->SignalProcessingGraph:
+    """
+    Create SignalProcessingGraph containing only the roots of the original graph, creating edges according
+     to a matrix of edgeweights
+    :param mat: expected to be the Schur-complement of the original_graph
+    :param original_graph: graph of which the downsampled graph is constructed
+    :return: downsampled graph
+    """
     g = SignalProcessingGraph()
     if original_graph is None:
-        raise Exception('Procedure not yet written')
+        raise NotImplementedError('Procedure not yet written')
     if original_graph is not None:
         for node in original_graph.roots:
             g.add_node(node)
@@ -775,9 +826,4 @@ def create_graph_from_matrix(mat, original_graph=None):
         for e in dok_mat.keys():
             if e[0] != e[1]:
                 g.add_edge(node_number_dict[e[0]], node_number_dict[e[1]], weight=dok_mat[e], hidden=True)
-        # for x in original_graph.roots:
-        #     for y in original_graph.roots:
-        #         if x != y and mat[original_graph.nodes[x]['node_number'], original_graph.nodes[y]['node_number']] != 0:
-        #             g.add_edge(x, y, weight=mat[
-        #                 original_graph.nodes[x]['node_number'], original_graph.nodes[y]['node_number']], hidden=False)
     return g
