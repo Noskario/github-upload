@@ -1,9 +1,9 @@
-from wilson import WilsonGraph
+from signal_processing import SignalProcessingGraph
 import networkx as nx
 import numpy as np
 
 
-class RingGraph(WilsonGraph):
+class RingGraph(SignalProcessingGraph):
     def __init__(self, N):
         super().__init__()
         for n in range(N):
@@ -14,7 +14,7 @@ class RingGraph(WilsonGraph):
         self.add_edge(N - 1, 0, weight=1)
 
 
-class WattsStrogatzGraph(WilsonGraph):
+class WattsStrogatzGraph(SignalProcessingGraph):
     def __init__(self, N, K, beta):
         super().__init__()
         nw = nx.watts_strogatz_graph(N, K, beta)

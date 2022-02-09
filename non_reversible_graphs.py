@@ -1,7 +1,7 @@
-from wilson import WilsonGraph
+from signal_processing import SignalProcessingGraph
 
 
-class Halfer(WilsonGraph):
+class Halfer(SignalProcessingGraph):
     def __init__(self, N):
         super().__init__()
         for i in range(N + 1):
@@ -16,7 +16,7 @@ class Halfer(WilsonGraph):
         self.add_edge(N, 0, weight=1)
 
 
-class Triangle(WilsonGraph):
+class Triangle(SignalProcessingGraph):
     def __init__(self, a=1):
         super().__init__()
         self.add_node(1, value=0, x=0, y=0)
@@ -25,3 +25,12 @@ class Triangle(WilsonGraph):
         self.add_edge(1, 2, weight=1)
         self.add_edge(2, 3, weight=1)
         self.add_edge(3, 1, weight=a)
+
+
+class DirectedLine(SignalProcessingGraph):
+    def __init__(self, N: int):
+        super().__init__()
+        for n in range(N):
+            self.add_node(n, value=n, x=100 * n, y=0)
+        for n in range(N - 1):
+            self.add_edge(n, n + 1, weight=1)

@@ -1,8 +1,8 @@
 import read_in_data
-from wilson import WilsonGraph
+from signal_processing import SignalProcessingGraph
 
 
-class FacebookGraph(WilsonGraph):
+class FacebookGraph(SignalProcessingGraph):
     def __init__(self):
         super().__init__()
         nw = read_in_data.G_fb

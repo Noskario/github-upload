@@ -13,7 +13,7 @@ import numpy as np
 import square_graph
 import matplotlib.pyplot as plt
 
-import wilson
+import signal_processing
 import pickle
 
 
@@ -118,10 +118,10 @@ def visualize_analysis_operator():
 def visualize_downsampled_graph():
     graph = square_graph.SquareSignalProcessingGraph(30, standardweights=True)
     graph.wilson(3)
-    dg = wilson.create_graph_from_matrix(graph.compute_Schur_complement(make_sparse=False), graph)
+    dg = signal_processing.create_graph_from_matrix(graph.compute_Schur_complement(make_sparse=False), graph)
     dg.wilson(1.2345)
     print(len(dg.edges))
-    dgd = wilson.create_graph_from_matrix(graph.compute_Schur_complement(make_sparse=True), graph)
+    dgd = signal_processing.create_graph_from_matrix(graph.compute_Schur_complement(make_sparse=True), graph)
     dgd.wilson(1.2345)
     print(len(dgd.edges))
     # We only draw edges that have high weights
@@ -139,7 +139,7 @@ def visualize_downsampled_graph():
 
 def visualize_multiresolution():
     graph = square_graph.SquareSignalProcessingGraph(90, standardweights=False)
-    q_list, q_prime_list, graph_list = wilson.multiresolution(graph, steps=6)
+    q_list, q_prime_list, graph_list = signal_processing.multiresolution(graph, steps=6)
     vmax = graph.get_maximum_value()
     vmin = graph.get_minimum_value()
     vmax = max(vmax, -vmin)
@@ -148,7 +148,7 @@ def visualize_multiresolution():
     for i, g in enumerate(graph_list):
         g.create_picture(f'analyzed_graph{i + 1}.png', color_using_roots=False, vmax=vmax, vmin=vmin, colorbar=False,
                          node_size=3)
-    reconstr_graph_list = wilson.multi_reconstr(graph_list, q_prime_list)
+    reconstr_graph_list = signal_processing.multi_reconstr(graph_list, q_prime_list)
     for i, g in enumerate(reconstr_graph_list):
         g.create_picture(f'reconstr_graph{i + 1}.png', color_using_roots=False, vmax=vmax, vmin=vmin, colorbar=False,
                          node_size=3)
@@ -160,7 +160,7 @@ def runtime_test_Schur_complement():
     for n in nlist:
         g = square_graph.SquareSignalProcessingGraph(n, standardweights=False)
         g.wilson(1.23456)
-        q, _ = g._find_q(theta_1=.2, theta_2=1.)
+        q = g._find_q(theta1=.2, theta2=1.)
         g.wilson(q)
         temp = time.perf_counter()
         g.compute_Schur_complement()
@@ -180,3 +180,5 @@ if __name__ == '__main__':
     g = square_graph.SquareSignalProcessingGraph(40, standardweights=False)
     print(type(g.nodes['23,1']))
     print(type(g.edges['2,3','3,3']))
+    g.wilson(1.234)
+    print(type(g.compute_Schur_complement()))
