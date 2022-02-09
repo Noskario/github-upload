@@ -9,7 +9,7 @@ def cutter(n, threshold):
         return 0
 
 
-class SquareWilson(SignalProcessingGraph):
+class SquareSignalProcessingGraph(SignalProcessingGraph):
     def __init__(self, n: int, standardweights=True):
         super().__init__()
         zeilen = n
@@ -60,7 +60,7 @@ class SquareWilson(SignalProcessingGraph):
                 self.add_edge(str(i + 1) + ',' + str(spalten - 1), str(i) + ',' + str(spalten - 1), weight=1)
 
 
-class SquareWilsonConstantValues(SignalProcessingGraph):
+class SquareSignalProcessingGraphConstantValues(SignalProcessingGraph):
     def __init__(self, n: int, standardweights=True):
         super().__init__()
         zeilen = n
