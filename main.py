@@ -160,7 +160,7 @@ def runtime_test_Schur_complement():
     for n in nlist:
         g = square_graph.SquareSignalProcessingGraph(n, standardweights=False)
         g.wilson(1.23456)
-        q, _ = g._find_q(theta1=.2, theta2=1.)
+        q = g._find_q(theta1=.2, theta2=1.)
         g.wilson(q)
         temp = time.perf_counter()
         g.compute_Schur_complement()
@@ -180,3 +180,5 @@ if __name__ == '__main__':
     g = square_graph.SquareSignalProcessingGraph(40, standardweights=False)
     print(type(g.nodes['23,1']))
     print(type(g.edges['2,3','3,3']))
+    g.wilson(1.234)
+    print(type(g.compute_Schur_complement()))
