@@ -82,8 +82,7 @@ class SignalProcessingGraph(nx.DiGraph):
         """
         Creates an interactive html-image of the graph and opens it
         :param graphname: has to have the format "name_of_graph.html"
-        :param color_roots: If true then roots are shown darker than non-roots. If false colors are
-         derived from value on the vertices
+        :param color_roots: If true then roots are shown darker than non-roots. If false colors are derived from value on the vertices
         :param maximum: maximum value for color scheme if color_roots=False
         :param minimum: minimum value for color scheme if color_roots=False
         :return: does not return anything, but draws the graph creating an html-file
@@ -260,8 +259,7 @@ class SignalProcessingGraph(nx.DiGraph):
             temp += self[node][nbr]['weight']
             if temp > r:
                 return nbr
-        # if no neighbor has been chosen up to this point, it is becuase `nodeweight==0`. In this case `node` is a sink
-        return node
+        raise 'No neighbor chosen. That is strange.'
 
     def color_roots(self):
         """
@@ -323,8 +321,6 @@ class SignalProcessingGraph(nx.DiGraph):
         """
         number_of_reprocessed_nodes = 0
         chosen_nbr = self.choose_random_neighbor(x)
-        if chosen_nbr == x:  # only happens when x is a sink in which case x has to stay a root
-            return number_of_reprocessed_nodes
         y = chosen_nbr
         trajectory = [x, y]
         # We follow the already uncovered arrows until we either walk a loop
@@ -802,12 +798,12 @@ def multi_resolution_and_reconstr(g: SignalProcessingGraph, steps=5):
     :param g: Graph that gets analyzed
     :param steps: number of steps
     """
+    g.show('g.html', color_roots=False)
     q_list, q_prime_list, graph_list = multiresolution(g, steps)
-    modified_graph_list = multi_reconstr(graph_list, q_prime_list)
-    return graph_list, modified_graph_list, q_list, q_prime_list
+    multi_reconstr(graph_list, q_prime_list)
 
 
-def create_graph_from_matrix(mat, original_graph=None) -> SignalProcessingGraph:
+def create_graph_from_matrix(mat, original_graph=None)->SignalProcessingGraph:
     """
     Create SignalProcessingGraph containing only the roots of the original graph, creating edges according
      to a matrix of edgeweights
