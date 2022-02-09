@@ -41,3 +41,8 @@ Thumbs.db
 *.pdf
 *.png
 *.html
+
+# other files #
+###############
+.ipynb_checkpoints
+.idea
