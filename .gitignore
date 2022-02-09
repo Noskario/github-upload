@@ -42,7 +42,7 @@ Thumbs.db
 *.png
 *.html
 
-# other files #
+# special directories #
 ###############
 .ipynb_checkpoints
 .idea
