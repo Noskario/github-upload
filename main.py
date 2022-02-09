@@ -13,7 +13,7 @@ import numpy as np
 import square_graph
 import matplotlib.pyplot as plt
 
-import wilson
+import signal_processing
 import pickle
 
 
