@@ -177,8 +177,4 @@ def runtime_test_Schur_complement():
 
 
 if __name__ == '__main__':
-    g = square_graph.SquareSignalProcessingGraph(40, standardweights=False)
-    print(type(g.nodes['23,1']))
-    print(type(g.edges['2,3','3,3']))
-    g.wilson(1.234)
-    print(type(g.compute_Schur_complement()))
+    visualize_analysis_operator()
